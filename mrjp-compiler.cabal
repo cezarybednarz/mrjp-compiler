@@ -1,0 +1,51 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.34.4.
+--
+-- see: https://github.com/sol/hpack
+
+name:           mrjp-compiler
+version:        0.1.0.0
+description:    Latte language compiler
+homepage:       https://github.com/cezarybednarz/mrjp-compiler#readme
+bug-reports:    https://github.com/cezarybednarz/mrjp-compiler/issues
+author:         Cezary Bednarz
+maintainer:     Cezary Bednarz
+license:        BSD3
+build-type:     Simple
+extra-source-files:
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/cezarybednarz/mrjp-compiler
+
+library
+  exposed-modules:
+      Grammar.Test
+      Main
+  other-modules:
+      Paths_mrjp_compiler
+  hs-source-dirs:
+      src
+  build-depends:
+      array
+    , base >=4.7 && <5
+    , containers
+    , mtl
+  default-language: Haskell2010
+
+executable compiler
+  main-is: Main.hs
+  other-modules:
+      Grammar.Test
+      Paths_mrjp_compiler
+  hs-source-dirs:
+      src
+  build-depends:
+      array
+    , base >=4.7 && <5
+    , containers
+    , mrjp-compiler
+    , mtl
+  default-language: Haskell2010
