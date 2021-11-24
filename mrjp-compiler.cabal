@@ -22,7 +22,16 @@ source-repository head
 
 library
   exposed-modules:
-      Grammar.Test
+      Frontend.Analyse
+      Frontend.Environment
+      Frontend.Exception
+      Frontend.Run
+      Latte.Abs
+      Latte.ErrM
+      Latte.Lex
+      Latte.Par
+      Latte.Print
+      Latte.Skel
       Main
   other-modules:
       Paths_mrjp_compiler
@@ -38,7 +47,16 @@ library
 executable compiler
   main-is: Main.hs
   other-modules:
-      Grammar.Test
+      Frontend.Analyse
+      Frontend.Environment
+      Frontend.Exception
+      Frontend.Run
+      Latte.Abs
+      Latte.ErrM
+      Latte.Lex
+      Latte.Par
+      Latte.Print
+      Latte.Skel
       Paths_mrjp_compiler
   hs-source-dirs:
       src
