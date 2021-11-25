@@ -33,26 +33,26 @@ declareFunc id func = do
 
 -- get values -- 
 
-getFunc :: BNFC'Position -> Ident ->SAM Func
+getFunc :: BNFC'Position -> Ident -> SAM Func
 getFunc line id = do
   func <- asks (Map.lookup id . snd)
   case func of
     Just l -> return l
-    Nothing -> throwError $ errMessage line $ "function " ++ show id ++ " not defined"
+    Nothing -> throwErrMessage line (Undefined id)
 
-getIdentLoc :: BNFC'Position -> Ident ->SAM Loc
+getIdentLoc :: BNFC'Position -> Ident -> SAM Loc
 getIdentLoc line id = do
   loc <- asks (Map.lookup id . fst)
   case loc of
     Just l -> return l
-    Nothing -> throwError $ errMessage line $ "variable " ++ show id ++ " not declared"
+    Nothing -> throwErrMessage line (VariableUndeclared id)
 
 getLocVal :: BNFC'Position -> Loc -> SAM Val
 getLocVal line loc = do
   val <- gets $ Map.lookup loc
   case val of
     Just v -> return v
-    Nothing -> throwError $ errMessage line $ "location " ++ show loc ++ " has no value assigned"
+    Nothing -> Return (Val -1) -- todo czy na pewno tego potrzebuje
 
 getIdentVal :: BNFC'Position -> Ident -> SAM Val
 getIdentVal line id = do
@@ -119,12 +119,12 @@ andVBool (VBool a) (VBool b) = VBool (a && b)
 orVBool :: Val -> Val -> Val
 orVBool (VBool a) (VBool b) = VBool (a || b)
 
-declFunctionArgs :: BNFC'Position -> [Expr] -> [Arg] ->SAM Env
-declFunctionArgs _ [] [] = ask
-declFunctionArgs line [] (a:xa) = throwError $ errMessage line "number of arguments don't match"
-declFunctionArgs line (e:xe) [] = throwError $ errMessage line "number of arguments don't match"
+declFunctionArgs :: BNFC'Position -> Ident -> [Expr] -> [Arg] -> SAM Env
+declFunctionArgs _ _ [] [] = ask
+declFunctionArgs line id [] (a:xa) = throwErrMessage line (FuncArgsNumberMismatch id)
+declFunctionArgs line id (e:xe) [] = throwErrMessage line (FuncArgsNumberMismatch id)
 -- todo ogarnac deklaracje argumentów w funkcji
--- declFunctionArgs _ (e:xe) (a:xa) = do
+-- declFunctionArgs _ id (e:xe) (a:xa) = do
 --   v <- evalExpr e
 --   (_, funcEnv) <- ask
 --   case a of
@@ -140,7 +140,7 @@ declFunctionArgs line (e:xe) [] = throwError $ errMessage line "number of argume
 --         _ ->
 --           throwError $ errMessage line "cannot pass given expression by reference"
 
-evalTwoIntExpr :: BNFC'Position -> Expr -> Expr ->SAM (Integer, Integer)
+evalTwoIntExpr :: BNFC'Position -> Expr -> Expr -> SAM (Integer, Integer)
 evalTwoIntExpr line expr1 expr2 = do
   e1 <- evalExpr expr1
   e2 <- evalExpr expr2
@@ -148,10 +148,10 @@ evalTwoIntExpr line expr1 expr2 = do
     (VInt i1) -> do
       case e2 of
         (VInt i2) -> return (i1, i2)
-        _ -> throwError $ errMessage line "second argument should be integer"
-    _ -> throwError $ errMessage line "first argument should be integer"
+        _ -> throwError $ throwErrMessage ArithmOpTypeMismatch
+    _ -> throwErrMessage ArithmOpTypeMismatch
 
-evalTwoBoolExpr :: BNFC'Position -> Expr -> Expr ->SAM (Bool, Bool)
+evalTwoBoolExpr :: BNFC'Position -> Expr -> Expr -> SAM (Bool, Bool)
 evalTwoBoolExpr line expr1 expr2 = do
   e1 <- evalExpr expr1
   e2 <- evalExpr expr2
@@ -159,8 +159,8 @@ evalTwoBoolExpr line expr1 expr2 = do
     (VBool b1) -> do
       case e2 of
         (VBool b2) -> return (b1, b2)
-        _ -> throwError $ errMessage line "second argument should be boolean"
-    _ -> throwError $ errMessage line "first argument should be boolean"
+        _ -> throwErrMessage BoolOpTypeMismatch
+    _ -> throw BoolOpTypeMismatch
 
 evalOneIntExpr :: BNFC'Position -> Expr -> SAM Integer
 evalOneIntExpr line expr1 = do
@@ -168,7 +168,7 @@ evalOneIntExpr line expr1 = do
   case e1 of
     (VInt i1) -> do
       return i1
-    _ -> throwError $ errMessage line "argument should be integer"
+    _ -> throwError $ errMessage line "argument should be integer" -- todo tutaj skonczylem
 
 evalOneBoolExpr :: BNFC'Position -> Expr -> SAM Bool
 evalOneBoolExpr line expr1 = do
@@ -209,7 +209,7 @@ evalExpr (ELitFalse line) = return (VBool False)
 
 evalExpr (EApp line id exprs) = do
   (VFunc t id args (Block line2 b)) <- getFunc line id
-  env <- declFunctionArgs line exprs args
+  env <- declFunctionArgs line id exprs args
   retVal <- local (const env) $ execBlock b
   case retVal of
     (Return val, _) -> do
