@@ -1,6 +1,8 @@
 module Frontend.Exception where
 
+import Frontend.Environment
 import Latte.Abs
+import Control.Monad.Except
 
 throwErrMessage :: BNFC'Position -> SemanticAnalysisException -> SAM ()
 throwErrMessage line exception =
@@ -15,15 +17,27 @@ data SemanticAnalysisException
     | FuncArgsNumberMismatch Ident
     | ArithmOpTypeMismatch
     | BoolOpTypeMismatch
-    | Integer -- todo
+    | NonIntArgument
+    | NonBoolArgument
+    | FuncWrongValueReturned Ident Val
+    | FuncNoValueReturned Ident
+    | DeclTypeMismatch Ident
 
 instance Show SemanticAnalysisException where
   show MainUndeclared = show "main() undeclared"
-  show (FunctionUndeclard Ident) = show "function " ++ ident ++ " undeclared"
-  show (VariableUndeclared Ident) = show "variable " ++ ident ++ " undeclared"
-  show (FuncArgsNumberMismatch Ident) = show "function " ++ ident ++ " called with wrong number of arguments"
+  show (FunctionUndeclared ident) = show $ "function " ++ show ident ++ " undeclared"
+  show (VariableUndeclared ident) = show $ "variable " ++ show ident ++ " undeclared"
+  show (FuncArgsNumberMismatch ident) = show $ "function " ++ show ident ++ " called with wrong number of arguments"
   show ArithmOpTypeMismatch = show "values should be integers in integer operator"
   show BoolOpTypeMismatch = show "values should be boolean in boolean operator"
+  show NonIntArgument = show "argument should be integer"
+  show NonBoolArgument = show "argument should be boolean"
+  show (FuncWrongValueReturned ident val) = show $ "function " ++ show ident ++ " should return " ++ show val
+  show (FuncNoValueReturned ident) = show $ "function " ++ show ident ++ " should return some value"
+  show (DeclTypeMismatch ident) = show $ "variable " ++ show ident ++ " should be defined with different type"
+
+
+
 
 
 
