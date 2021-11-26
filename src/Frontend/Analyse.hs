@@ -38,21 +38,21 @@ getFunc line id = do
   func <- asks (Map.lookup id . snd)
   case func of
     Just l -> return l
-    Nothing -> throwErrMessage line (FunctionUndeclared id)
+    Nothing -> throwError $ errMessage line (FunctionUndeclared id)
 
 getIdentLoc :: BNFC'Position -> Ident -> SAM Loc
 getIdentLoc line id = do
   loc <- asks (Map.lookup id . fst)
   case loc of
     Just l -> return l
-    Nothing -> throwErrMessage line (VariableUndeclared id)
+    Nothing -> throwError $ errMessage line (VariableUndeclared id)
 
 getLocVal :: BNFC'Position -> Loc -> SAM Val
 getLocVal line loc = do
   val <- gets $ Map.lookup loc
   case val of
     Just v -> return v
-    Nothing -> Return (Val -1) -- todo czy na pewno tego potrzebuje
+    Nothing -> throwError "compiler internal error: getLocVal"
 
 getIdentVal :: BNFC'Position -> Ident -> SAM Val
 getIdentVal line id = do
@@ -82,130 +82,82 @@ addTopDefs (def:ds) = do
 
 -- Expr Helpers --
 
-negVInt :: Val -> Val
-negVInt (VInt i) = VInt (-i)
-
-notVBool :: Val -> Val
-notVBool (VBool b) = VBool (not b)
-
-relVInt :: RelOp -> Val -> Val -> Val
-relVInt (LTH line) (VInt a) (VInt b) = VBool (a < b)
-relVInt (LE line) (VInt a) (VInt b) = VBool (a <= b)
-relVInt (GTH line) (VInt a) (VInt b) = VBool (a > b)
-relVInt (GE line) (VInt a) (VInt b) = VBool (a >= b)
-relVInt (EQU line) (VInt a) (VInt b) = VBool (a == b)
-relVInt (NE line) (VInt a) (VInt b) = VBool (a /= b)
-
-addVInt :: AddOp -> Val -> Val -> Val
-addVInt (Plus line) (VInt a) (VInt b) = VInt (a + b)
-addVInt (Minus line) (VInt a) (VInt b) = VInt (a - b)
-
-mulVInt :: MulOp -> Val -> Val ->SAM Val
-mulVInt (Times line) (VInt a) (VInt b) = return $ VInt (a * b)
-mulVInt (Div line) (VInt a) (VInt b) =
-  if b == 0 then
-    throwError $ errMessage line "division by 0"
-  else
-    return $ VInt (a `div` b)
-mulVInt (Mod line) (VInt a) (VInt b) =
-  if b == 0 then
-    throwError $ errMessage line "division by 0"
-  else
-    return $ VInt (a `mod` b)
-
-andVBool :: Val -> Val -> Val
-andVBool (VBool a) (VBool b) = VBool (a && b)
-
-orVBool :: Val -> Val -> Val
-orVBool (VBool a) (VBool b) = VBool (a || b)
-
 declFunctionArgs :: BNFC'Position -> Ident -> [Expr] -> [Arg] -> SAM Env
 declFunctionArgs _ _ [] [] = ask
-declFunctionArgs line id [] (a:xa) = throwErrMessage line (FuncArgsNumberMismatch id)
-declFunctionArgs line id (e:xe) [] = throwErrMessage line (FuncArgsNumberMismatch id)
--- todo ogarnac deklaracje argumentów w funkcji
--- declFunctionArgs _ id (e:xe) (a:xa) = do
---   v <- analyseExpr e
---   (_, funcEnv) <- ask
---   case a of
---     (ArgNoRef line t id) -> do
---       valEnv' <- declareVar id v
---       local (const (valEnv', funcEnv)) $ declFunctionArgs line xe xa
---     (ArgRef line t id) -> do
---       case e of
---         EVar line ident -> do
---           l <- getIdentLoc line ident
---           valEnv' <- asks (Map.insert id l . fst)
---           local (const (valEnv', funcEnv)) $ declFunctionArgs line xe xa
---         _ ->
---           throwError $ errMessage line "cannot pass given expression by reference"
+declFunctionArgs line id [] (a:xa) = throwError $ errMessage line (FuncArgsNumberMismatch id)
+declFunctionArgs line id (e:xe) [] = throwError $ errMessage line (FuncArgsNumberMismatch id)
+declFunctionArgs line id (e:xe) (a:xa) = do
+  v <- analyseExpr e
+  (_, funcEnv) <- ask
+  valEnv' <- declareVar id v
+  local (const (valEnv', funcEnv)) $ declFunctionArgs line id xe xa
 
-analyseTwoIntExpr :: BNFC'Position -> Expr -> Expr -> SAM (Integer, Integer)
+analyseTwoIntExpr :: BNFC'Position -> Expr -> Expr -> SAM ()
 analyseTwoIntExpr line expr1 expr2 = do
   e1 <- analyseExpr expr1
   e2 <- analyseExpr expr2
   case e1 of
-    (VInt i1) -> do
+    VInt -> do
       case e2 of
-        (VInt i2) -> return (i1, i2)
-        _ -> throwError $ throwErrMessage ArithmOpTypeMismatch
-    _ -> throwErrMessage ArithmOpTypeMismatch
+        VInt -> return ()
+        _ -> throwError $ errMessage line ArithmOpTypeMismatch
+    _ -> throwError $ errMessage line ArithmOpTypeMismatch
 
-analyseTwoBoolExpr :: BNFC'Position -> Expr -> Expr -> SAM (Bool, Bool)
+analyseTwoBoolExpr :: BNFC'Position -> Expr -> Expr -> SAM ()
 analyseTwoBoolExpr line expr1 expr2 = do
   e1 <- analyseExpr expr1
   e2 <- analyseExpr expr2
   case e1 of
-    (VBool b1) -> do
+    VBool -> do
       case e2 of
-        (VBool b2) -> return (b1, b2)
-        _ -> throwErrMessage BoolOpTypeMismatch
-    _ -> throw BoolOpTypeMismatch
+        VBool -> return ()
+        _ -> throwError $ errMessage line BoolOpTypeMismatch
+    _ -> throwError $ errMessage line BoolOpTypeMismatch
 
-analyseOneIntExpr :: BNFC'Position -> Expr -> SAM Integer
+analyseOneIntExpr :: BNFC'Position -> Expr -> SAM ()
 analyseOneIntExpr line expr1 = do
   e1 <- analyseExpr expr1
   case e1 of
-    (VInt i1) -> do
-      return i1
-    _ -> throwErrMessage line NonIntArgument
+    VInt -> do
+      return ()
+    _ -> throwError $ errMessage line NonIntArgument
 
-analyseOneBoolExpr :: BNFC'Position -> Expr -> SAM Bool
+analyseOneBoolExpr :: BNFC'Position -> Expr -> SAM ()
 analyseOneBoolExpr line expr1 = do
   e1 <- analyseExpr expr1
   case e1 of
-    (VBool b1) -> do
-      return b1
-    _ -> throwErrMessage line NonBoolArgument
+    VBool -> do
+      return ()
+    _ -> throwError $ errMessage line NonBoolArgument
 
 cmpTypeVal :: Type -> Val -> SAM Bool
 cmpTypeVal t val = do
   case t of
     Int _ ->
       case val of
-      (VInt _) -> return True
+      VInt -> return True
       _ -> return False
     Bool _ ->
       case val of
-      (VBool _) -> return True
+      VBool -> return True
       _ -> return False
     Str _ ->
       case val of
-      (VString _) -> return True
+      VString -> return True
       _ -> return False
     Void _ ->
       case val of
       VVoid -> return True
       _ -> return False
-    -- _ -> throwError $ errMessage Nothing "unknown type"
+    _ -> throwError "unknown type"
 
 -- Analyse Expr --
 
 analyseExpr :: Expr -> SAM Val
 analyseExpr (EVar line id) = getIdentVal line id
-analyseExpr (ELitInt line i) = return (VInt i)
-analyseExpr (ELitTrue line) = return (VBool True)
-analyseExpr (ELitFalse line) = return (VBool False)
+analyseExpr (ELitInt line i) = return VInt
+analyseExpr (ELitTrue line) = return VBool
+analyseExpr (ELitFalse line) = return VBool
 
 analyseExpr (EApp line id exprs) = do
   (VFunc t id args (Block line2 b)) <- getFunc line id
@@ -217,31 +169,31 @@ analyseExpr (EApp line id exprs) = do
       if goodType then
         return val
       else
-        throwErrMessage line (FuncWrongValueReturned id val)
-    _ -> throwErrMessage line (FuncNoValueReturned id)
+        throwError $ errMessage line (FuncWrongValueReturned id val)
+    _ -> throwError $ errMessage line (FuncNoValueReturned id)
 
-analyseExpr (EString line s) = return (VString s)
+analyseExpr (EString line s) = return VString
 analyseExpr (Neg line expr) = do
-  i <- analyseOneIntExpr line expr
-  return $ negVInt (VInt i)
+  analyseOneIntExpr line expr
+  return VInt
 analyseExpr (Not line expr) = do
-  b <- analyseOneBoolExpr line expr
-  return $ notVBool (VBool b)
+  analyseOneBoolExpr line expr
+  return VBool
 analyseExpr (EMul line expr1 op expr2) = do
-  (i1, i2) <- analyseTwoIntExpr line expr1 expr2
-  mulVInt op (VInt i1) (VInt i2)
+  analyseTwoIntExpr line expr1 expr2
+  return VInt
 analyseExpr (EAdd line expr1 op expr2) = do
-  (i1, i2) <- analyseTwoIntExpr line expr1 expr2
-  return $ addVInt op (VInt i1) (VInt i2)
+  analyseTwoIntExpr line expr1 expr2
+  return VInt
 analyseExpr (EAnd line expr1 expr2) = do
-  (b1, b2) <- analyseTwoBoolExpr line expr1 expr2
-  return $ andVBool (VBool b1) (VBool b2)
+  analyseTwoBoolExpr line expr1 expr2
+  return VBool
 analyseExpr (ERel line expr1 op expr2) = do
-  (i1, i2) <- analyseTwoIntExpr line expr1 expr2
-  return $ relVInt op (VInt i1) (VInt i2)
+  analyseTwoIntExpr line expr1 expr2
+  return VInt
 analyseExpr (EOr line expr1 expr2) = do
-  (b1, b2) <- analyseTwoBoolExpr line expr1 expr2
-  return $ orVBool (VBool b1) (VBool b2)
+  analyseTwoBoolExpr line expr1 expr2
+  return VBool
 
 -- Stmt --
 
@@ -255,15 +207,14 @@ execBlock (s:ss) = do
     (Return val, env) -> return (Return val, env)
     (ReturnNothing, env) -> do
       local (const env) $ execBlock ss
-    (breakOrCont, env) -> return (breakOrCont, env)
 
 declItem :: Type -> Item -> SAM Env
 declItem t (NoInit line id) = do
   (_, funcEnv) <- ask
   n <- case t of
-    Int line2 -> return (VInt 0)
-    Bool line2 -> return (VBool False)
-    Str line2 -> return (VString "")
+    Int line2 -> return VInt
+    Bool line2 -> return VBool
+    Str line2 -> return VString
   valEnv <- declareVar id n
   return (valEnv, funcEnv)
 declItem t (Init line2 id e) = do
@@ -274,7 +225,7 @@ declItem t (Init line2 id e) = do
     valEnv <- declareVar id n
     return (valEnv, funcEnv)
   else
-    throwErrMessage line (DeclTypeMismatch id)
+    throwError $ errMessage line2 (DeclTypeMismatch id)
 
 execDecl :: Type -> [Item] -> SAM Env
 execDecl t [] = ask
@@ -302,22 +253,22 @@ execStmt (Ass line id expr) = do
 execStmt (Incr line id) = do
   val <- getIdentVal line id
   case val of
-    (VInt v) -> do
+    VInt -> do
       l <- getIdentLoc line id
       env <- ask
-      insertValue l (VInt $ v + 1)
+      insertValue l VInt
       return (ReturnNothing, env)
-    _ -> throwErrMessage line NonIntArgument
+    _ -> throwError $ errMessage line NonIntArgument
 
 execStmt (Decr line id) = do
   val <- getIdentVal line id
   case val of
-    (VInt v) -> do
+    VInt -> do
       l <- getIdentLoc line id
       env <- ask
-      insertValue l (VInt $ v - 1)
+      insertValue l VInt
       return (ReturnNothing, env)
-    _ -> throwErrMessage line NonIntArgument
+    _ -> throwError $ errMessage line NonIntArgument
 
 execStmt (Ret line expr) = do
   e <- analyseExpr expr
@@ -326,38 +277,38 @@ execStmt (Ret line expr) = do
 execStmt (VRet line) = do
   env <- ask
   return (Return VVoid, env)
-execStmt (Cond line expr (Block line2 block)) = do
-  b <- analyseOneBoolExpr line expr
+execStmt (Cond line expr (BStmt _ (Block line2 block))) = do
+  analyseOneBoolExpr line expr
   env <- ask
-  case b of 
-    ELitTrue -> do
+  case expr of 
+    ELitTrue _ -> do
       (retVal, _) <- local (const env) $ execBlock block
       return (retVal, env)
     _ ->
       return (ReturnNothing, env)
 
-execStmt (CondElse line expr (Block line2 b1) (Block line3 b2)) = do
-  b <- analyseOneBoolExpr line expr
+execStmt (CondElse line expr (BStmt _ (Block line2 b1)) (BStmt _ (Block line3 b2))) = do
+  analyseOneBoolExpr line expr
   env <- ask
-  case b of
-    ELitTrue -> do 
+  case expr of
+    ELitTrue _ -> do 
       (retVal, _) <- local (const env) $ execBlock b1
       return (retVal, env)
-    ELitFalse -> do
+    ELitFalse _ -> do
       (retVal, _) <- local (const env) $ execBlock b2
       return (retVal, env)
     _ -> 
       return (ReturnNothing, env)
 
-execStmt (While line expr (Block line2 block)) = do
-  b <- analyseOneBoolExpr line expr
+execStmt (While line expr (BStmt _ (Block line2 block))) = do
+  analyseOneBoolExpr line expr
   env <- ask
-  case b of 
-    ELitTrue -> do
+  case expr of 
+    ELitTrue _ -> do
       (retVal, _) <- local (const env) $ execBlock block
       case retVal of
         Return val -> return (Return val, env)
-        _ -> execStmt (While line expr (Block line2 block))
+        _ -> return (ReturnNothing, env)
     _ ->
       return (ReturnNothing, env)
 

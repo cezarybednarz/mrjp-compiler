@@ -29,9 +29,9 @@ type SAM a = ReaderT Env (ExceptT String (StateT Store IO)) a
 data Func = VFunc Type Ident [Arg] Block
 
 data Val
-    = VInt Integer
-    | VBool Bool
-    | VString String
+    = VInt
+    | VBool
+    | VString
     | VVoid
   deriving (Eq, Ord)
 
@@ -40,10 +40,10 @@ instance Show Func where
   show (VFunc _ id _ _) = show id
 
 instance Show Val where
-  show (VInt val) = show val
-  show (VBool b) = show b
-  show (VString str) = show str
-  show VVoid = show "void"
+  show VInt = show "VInt"
+  show VBool = show "VBool"
+  show VString = show "VString"
+  show VVoid = show "VVoid"
 
 -- RetInfo --
 

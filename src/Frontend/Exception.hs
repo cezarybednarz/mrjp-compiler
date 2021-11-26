@@ -4,11 +4,13 @@ import Frontend.Environment
 import Latte.Abs
 import Control.Monad.Except
 
-throwErrMessage :: BNFC'Position -> SemanticAnalysisException -> SAM ()
-throwErrMessage line exception =
+errMessage :: BNFC'Position -> SemanticAnalysisException -> String
+errMessage line exception =
   case line of
-    Just (line, col) -> throwError $ "ERROR: line " ++ show line ++ " column " ++ show col ++ ": " ++ show exception
-    Nothing -> throwError $ "ERROR: " ++ show exception
+    Just (line, col) -> 
+      "ERROR: line " ++ show line ++ " column " ++ show col ++ ": " ++ show exception
+    Nothing -> 
+      "ERROR: " ++ show exception
 
 data SemanticAnalysisException
     = MainUndeclared

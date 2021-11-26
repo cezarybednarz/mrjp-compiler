@@ -4,7 +4,7 @@ import System.Environment ( getArgs )
 import Data.Map.Lazy as LazyMap ()
 import System.Exit ( exitFailure, exitSuccess )
 import Latte.Par ( pProgram, myLexer )
-import System.IO ( stderr, hPutStrLn )
+import System.IO ( stderr, hPutStrLn, putStrLn )
 import Frontend.Run 
 import Frontend.Environment
 
@@ -28,8 +28,6 @@ main = do
           (output, _) <- runSemanticAnalysis tree
           case output of
             Left message -> hPutStrLn stderr message
-            Right (VInt exitCode) -> do
-              if exitCode /= 0
-                then hPutStrLn stderr $ "ERROR\n exit code: " ++ show exitCode
-              else
+            Right _ -> do
+                putStrLn "OK\n"
                 exitSuccess
