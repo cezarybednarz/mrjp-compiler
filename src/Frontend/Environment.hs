@@ -60,7 +60,7 @@ initEnv = (Map.empty, Map.empty)
 
 -- !debug --
 
-debug ::SAM ()
+debug :: SAM ()
 debug = do
   (m1, m2) <- ask
   store <- get
