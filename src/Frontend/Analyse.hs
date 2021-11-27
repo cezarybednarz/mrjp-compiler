@@ -9,6 +9,12 @@ import Control.Monad.Reader
 import Control.Monad.Except
 import Data.Maybe
 
+-- void printInt(int)
+-- void printString(string)
+-- void error()
+-- int readInt()
+-- string readString()
+
 -- Memory Management -- 
 
 alloc :: SAM Loc
@@ -149,7 +155,7 @@ cmpTypeVal t val = do
       case val of
       VVoid -> return True
       _ -> return False
-    _ -> throwError "unknown type"
+    _ -> throwError "compiler internal error: cmpTypeVal"
 
 -- Analyse Expr --
 
@@ -162,7 +168,7 @@ analyseExpr (ELitFalse line) = return VBool
 analyseExpr (EApp line id exprs) = do
   (VFunc t id args (Block line2 b)) <- getFunc line id
   env <- declFunctionArgs line id exprs args
-  retVal <- local (const env) $ execBlock b
+  retVal <- local (const env) $ analyseBlock b
   case retVal of
     (Return val, _) -> do
       goodType <- cmpTypeVal t val
@@ -197,16 +203,16 @@ analyseExpr (EOr line expr1 expr2) = do
 
 -- Stmt --
 
-execBlock :: [Stmt] -> SAM (RetInfo, Env)
-execBlock [] = do
+analyseBlock :: [Stmt] -> SAM (RetInfo, Env)
+analyseBlock [] = do
   env <- ask
   return (ReturnNothing, env)
-execBlock (s:ss) = do
-  ret <- execStmt s
+analyseBlock (s:ss) = do
+  ret <- analyseStmt s
   case ret of
     (Return val, env) -> return (Return val, env)
     (ReturnNothing, env) -> do
-      local (const env) $ execBlock ss
+      local (const env) $ analyseBlock ss
 
 declItem :: Type -> Item -> SAM Env
 declItem t (NoInit line id) = do
@@ -227,30 +233,30 @@ declItem t (Init line2 id e) = do
   else
     throwError $ errMessage line2 (DeclTypeMismatch id)
 
-execDecl :: Type -> [Item] -> SAM Env
-execDecl t [] = ask
-execDecl t (x:xs) = do
+analyseDecl :: Type -> [Item] -> SAM Env
+analyseDecl t [] = ask
+analyseDecl t (x:xs) = do
   env <- declItem t x
-  local (const env) $ execDecl t xs
+  local (const env) $ analyseDecl t xs
 
 -- Execute Stmt -- 
 
-execStmt :: Stmt -> SAM (RetInfo, Env)
-execStmt (Empty line) = do
+analyseStmt :: Stmt -> SAM (RetInfo, Env)
+analyseStmt (Empty line) = do
   env <- ask
   return (ReturnNothing, env)
-execStmt (BStmt line (Block line2 b)) = execBlock b
-execStmt (Decl line t items) = do
-  env <- execDecl t items
+analyseStmt (BStmt line (Block line2 b)) = analyseBlock b
+analyseStmt (Decl line t items) = do
+  env <- analyseDecl t items
   return (ReturnNothing, env)
-execStmt (Ass line id expr) = do
+analyseStmt (Ass line id expr) = do
   n <- analyseExpr expr
   l <- getIdentLoc line id
   env <- ask
   insertValue l n
   return (ReturnNothing, env)
 
-execStmt (Incr line id) = do
+analyseStmt (Incr line id) = do
   val <- getIdentVal line id
   case val of
     VInt -> do
@@ -260,7 +266,7 @@ execStmt (Incr line id) = do
       return (ReturnNothing, env)
     _ -> throwError $ errMessage line NonIntArgument
 
-execStmt (Decr line id) = do
+analyseStmt (Decr line id) = do
   val <- getIdentVal line id
   case val of
     VInt -> do
@@ -270,49 +276,49 @@ execStmt (Decr line id) = do
       return (ReturnNothing, env)
     _ -> throwError $ errMessage line NonIntArgument
 
-execStmt (Ret line expr) = do
+analyseStmt (Ret line expr) = do
   e <- analyseExpr expr
   env <- ask
   return (Return e, env)
-execStmt (VRet line) = do
+analyseStmt (VRet line) = do
   env <- ask
   return (Return VVoid, env)
-execStmt (Cond line expr (BStmt _ (Block line2 block))) = do
+analyseStmt (Cond line expr (BStmt _ (Block line2 block))) = do
   analyseOneBoolExpr line expr
   env <- ask
   case expr of 
     ELitTrue _ -> do
-      (retVal, _) <- local (const env) $ execBlock block
+      (retVal, _) <- local (const env) $ analyseBlock block
       return (retVal, env)
     _ ->
       return (ReturnNothing, env)
 
-execStmt (CondElse line expr (BStmt _ (Block line2 b1)) (BStmt _ (Block line3 b2))) = do
+analyseStmt (CondElse line expr (BStmt _ (Block line2 b1)) (BStmt _ (Block line3 b2))) = do
   analyseOneBoolExpr line expr
   env <- ask
   case expr of
     ELitTrue _ -> do 
-      (retVal, _) <- local (const env) $ execBlock b1
+      (retVal, _) <- local (const env) $ analyseBlock b1
       return (retVal, env)
     ELitFalse _ -> do
-      (retVal, _) <- local (const env) $ execBlock b2
+      (retVal, _) <- local (const env) $ analyseBlock b2
       return (retVal, env)
     _ -> 
       return (ReturnNothing, env)
 
-execStmt (While line expr (BStmt _ (Block line2 block))) = do
+analyseStmt (While line expr (BStmt _ (Block line2 block))) = do
   analyseOneBoolExpr line expr
   env <- ask
   case expr of 
     ELitTrue _ -> do
-      (retVal, _) <- local (const env) $ execBlock block
+      (retVal, _) <- local (const env) $ analyseBlock block
       case retVal of
         Return val -> return (Return val, env)
         _ -> return (ReturnNothing, env)
     _ ->
       return (ReturnNothing, env)
 
-execStmt (SExp line expr) = do
+analyseStmt (SExp line expr) = do
   env <- ask
   analyseExpr expr
   return (ReturnNothing, env)
