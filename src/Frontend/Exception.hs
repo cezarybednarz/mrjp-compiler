@@ -8,9 +8,9 @@ errMessage :: BNFC'Position -> SemanticAnalysisException -> String
 errMessage line exception =
   case line of
     Just (line, col) -> 
-      "ERROR: line " ++ show line ++ " column " ++ show col ++ ": " ++ show exception
+      "ERROR\n line " ++ show line ++ " column " ++ show col ++ ": " ++ show exception
     Nothing -> 
-      "ERROR: " ++ show exception
+      "ERROR\n " ++ show exception
 
 data SemanticAnalysisException
     = MainUndeclared

@@ -70,6 +70,7 @@ getIdentVal line id = do
 runMain :: Program -> SAM Val
 runMain (Program line tds) = do
   env <- addTopDefs tds
+  debug -- todo
   local (const env) $ analyseExpr $ EApp line (Ident "main") []
 
 -- TopDef --
