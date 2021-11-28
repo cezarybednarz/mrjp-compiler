@@ -24,6 +24,7 @@ data SemanticAnalysisException
     | FuncWrongValueReturned Ident Val
     | FuncNoValueReturned Ident
     | DeclTypeMismatch Ident
+    | ConditionNonBoolean
 
 instance Show SemanticAnalysisException where
   show MainUndeclared = show "main() undeclared"
@@ -37,6 +38,7 @@ instance Show SemanticAnalysisException where
   show (FuncWrongValueReturned ident val) = show $ "function " ++ show ident ++ " should return " ++ show val
   show (FuncNoValueReturned ident) = show $ "function " ++ show ident ++ " should return some value"
   show (DeclTypeMismatch ident) = show $ "variable " ++ show ident ++ " should be defined with different type"
+  show ConditionNonBoolean = show "condition should be boolean" 
 
 
 

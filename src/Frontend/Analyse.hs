@@ -205,7 +205,7 @@ analyseExpr (EAnd line expr1 expr2) = do
   return VBool
 analyseExpr (ERel line expr1 op expr2) = do
   analyseTwoIntExpr line expr1 expr2
-  return VInt
+  return VBool
 analyseExpr (EOr line expr1 expr2) = do
   analyseTwoBoolExpr line expr1 expr2
   return VBool
@@ -292,40 +292,50 @@ analyseStmt (Ret line expr) = do
 analyseStmt (VRet line) = do
   env <- ask
   return (Return VVoid, env)
+
 analyseStmt (Cond line expr (BStmt _ (Block line2 block))) = do
-  analyseOneBoolExpr line expr
-  env <- ask
-  case expr of 
-    ELitTrue _ -> do
-      (retVal, _) <- local (const env) $ analyseBlock block
-      return (retVal, env)
-    _ ->
-      return (ReturnNothing, env)
+  val <- analyseExpr expr 
+  if val /= VBool then 
+    throwError $ errMessage line $ ConditionNonBoolean val
+  else do
+    env <- ask
+    case expr of 
+      ELitTrue _ -> do
+        (retVal, _) <- local (const env) $ analyseBlock block
+        return (retVal, env)
+      _ ->
+        return (ReturnNothing, env) -- todo analizowac blok
 
 analyseStmt (CondElse line expr (BStmt _ (Block line2 b1)) (BStmt _ (Block line3 b2))) = do
-  analyseOneBoolExpr line expr
-  env <- ask
-  case expr of
-    ELitTrue _ -> do 
-      (retVal, _) <- local (const env) $ analyseBlock b1
-      return (retVal, env)
-    ELitFalse _ -> do
-      (retVal, _) <- local (const env) $ analyseBlock b2
-      return (retVal, env)
-    _ -> 
-      return (ReturnNothing, env)
+  val <- analyseExpr expr 
+  if val /= VBool then 
+    throwError $ errMessage line $ ConditionNonBoolean val
+  else do
+    env <- ask
+    case expr of
+      ELitTrue _ -> do 
+        (retVal, _) <- local (const env) $ analyseBlock b1
+        return (retVal, env)
+      ELitFalse _ -> do
+        (retVal, _) <- local (const env) $ analyseBlock b2
+        return (retVal, env)
+      _ -> 
+        return (ReturnNothing, env) -- todo analizować bloki
 
 analyseStmt (While line expr (BStmt _ (Block line2 block))) = do
-  analyseOneBoolExpr line expr
-  env <- ask
-  case expr of 
-    ELitTrue _ -> do
-      (retVal, _) <- local (const env) $ analyseBlock block
-      case retVal of
-        Return val -> return (Return val, env)
-        _ -> return (ReturnNothing, env)
-    _ ->
-      return (ReturnNothing, env)
+  val <- analyseExpr expr 
+  if val /= VBool then 
+    throwError $ errMessage line $ ConditionNonBoolean val
+  else do
+    env <- ask
+    case expr of 
+      ELitTrue _ -> do
+        (retVal, _) <- local (const env) $ analyseBlock block
+        case retVal of
+          Return val -> return (Return val, env)
+          _ -> return (ReturnNothing, env)
+      _ ->
+        return (ReturnNothing, env) -- todo analizowac blok
 
 analyseStmt (SExp line expr) = do
   env <- ask
