@@ -1,6 +1,12 @@
 
 void f(int y) {
   y = y + y;
+  if (y == 0) {
+    return;
+  }
+  else {
+    return 3;
+  }
 }
 
 int main() {

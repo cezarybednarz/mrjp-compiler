@@ -40,10 +40,10 @@ instance Show Func where
   show (VFunc _ id _ _) = show id
 
 instance Show Val where
-  show VInt = show "VInt"
-  show VBool = show "VBool"
-  show VString = show "VString"
-  show VVoid = show "VVoid"
+  show VInt = show "Int"
+  show VBool = show "Bool"
+  show VString = show "String"
+  show VVoid = show "Void"
 
 -- RetInfo --
 

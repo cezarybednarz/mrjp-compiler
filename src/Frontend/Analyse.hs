@@ -59,12 +59,6 @@ getIdentVal line id = do
   loc <- getIdentLoc line id
   getLocVal line loc
 
--- void printInt(int)
--- void printString(string)
--- void error()
--- int readInt()
--- string readString()
-
 -- declare library functions --
 
 libraryFunctions :: BNFC'Position -> [TopDef]
@@ -80,7 +74,6 @@ libraryFunctions l =
 runMain :: Program -> SAM Val
 runMain (Program line tds) = do
   env <- addTopDefs $ tds ++ libraryFunctions line
-  local (const env) debug -- todo
   local (const env) $ analyseExpr $ EApp line (Ident "main") []
 
 -- TopDef --
@@ -103,10 +96,10 @@ declFunctionArgs :: BNFC'Position -> Ident -> [Expr] -> [Arg] -> SAM Env
 declFunctionArgs _ _ [] [] = ask
 declFunctionArgs line id [] (a:xa) = throwError $ errMessage line (FuncArgsNumberMismatch id)
 declFunctionArgs line id (e:xe) [] = throwError $ errMessage line (FuncArgsNumberMismatch id)
-declFunctionArgs line id (e:xe) (a:xa) = do
+declFunctionArgs line id (e:xe) ((Arg line2 t id2):xa) = do
   v <- analyseExpr e
   (_, funcEnv) <- ask
-  valEnv' <- declareVar id v
+  valEnv' <- declareVar id2 v
   local (const (valEnv', funcEnv)) $ declFunctionArgs line id xe xa
 
 analyseTwoIntExpr :: BNFC'Position -> Expr -> Expr -> SAM ()
@@ -187,7 +180,12 @@ analyseExpr (EApp line id exprs) = do
         return val
       else
         throwError $ errMessage line (FuncWrongValueReturned id val)
-    _ -> throwError $ errMessage line (FuncNoValueReturned id)
+    (ReturnNothing, _) -> do
+      returnVoid <- cmpTypeVal t VVoid
+      if returnVoid then 
+        return VVoid
+      else
+        throwError $ errMessage line (FuncNoValueReturned id)
 
 analyseExpr (EString line s) = return VString
 analyseExpr (Neg line expr) = do
