@@ -9,12 +9,6 @@ import Control.Monad.Reader
 import Control.Monad.Except
 import Data.Maybe
 
--- void printInt(int)
--- void printString(string)
--- void error()
--- int readInt()
--- string readString()
-
 -- Memory Management -- 
 
 alloc :: SAM Loc
@@ -65,12 +59,28 @@ getIdentVal line id = do
   loc <- getIdentLoc line id
   getLocVal line loc
 
+-- void printInt(int)
+-- void printString(string)
+-- void error()
+-- int readInt()
+-- string readString()
+
+-- declare library functions --
+
+libraryFunctions :: BNFC'Position -> [TopDef]
+libraryFunctions l = 
+  [ FnDef l (Void l) (Ident "printInt") [Arg l (Int l) (Ident "n")] (Block l []),
+    FnDef l (Void l) (Ident "printString") [Arg l (Str l) (Ident "s")] (Block l []),
+    FnDef l (Void l) (Ident "error") [] (Block l []),
+    FnDef l (Int l) (Ident "readInt") [] (Block l []),
+    FnDef l (Str l) (Ident "readString") [] (Block l []) ]
+
 -- run analysis from main --
 
 runMain :: Program -> SAM Val
 runMain (Program line tds) = do
-  env <- addTopDefs tds
-  debug -- todo
+  env <- addTopDefs $ tds ++ libraryFunctions line
+  local (const env) debug -- todo
   local (const env) $ analyseExpr $ EApp line (Ident "main") []
 
 -- TopDef --
