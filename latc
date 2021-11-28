@@ -1,2 +1,2 @@
 #!/bin/bash
-cabal run compiler -- test/moje/test.lat 
+cabal run compiler -- "$1"
