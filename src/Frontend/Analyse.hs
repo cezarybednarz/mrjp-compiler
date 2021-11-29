@@ -114,10 +114,17 @@ analyseTopDef :: TopDef -> SAM ()
 analyseTopDef (FnDef line t id args b) = do
   argExprs <- mapM convArgExpr args
   fnRetVal <- convTypeVal t
-  (valEnv, funcEnv, _) <- declFunctionArgs line id argExprs args
-  retVal <- local (const (valEnv, funcEnv, fnRetVal)) $ analyseBlock (BStmt line b)
-  -- todo
-  return ()
+  (_, funcEnv, _) <- ask
+  (valEnv, _, _) <- declFunctionArgs line id argExprs args
+  (blockRetVal, _) <- local (const (valEnv, funcEnv, fnRetVal)) $ analyseBlock (BStmt line b)  
+  case fnRetVal of 
+    VVoid -> return ()          -- ok, void 
+    _ ->                        
+      case blockRetVal of 
+        ReturnNothing ->        -- error, expecting to return some value
+          throwError $ errMessage line (FuncNoValueReturned id)
+        _ ->
+          return ()             -- ok, good value returned (value checked before in analyseBlock)
 
 analyseTopDefs :: [TopDef] -> SAM [()]
 analyseTopDefs = mapM analyseTopDef
@@ -182,23 +189,11 @@ analyseExpr (ELitInt line i) = return VInt
 analyseExpr (ELitTrue line) = return VBool
 analyseExpr (ELitFalse line) = return VBool
 
-analyseExpr (EApp line id exprs) = do -- todo odchudzić to i przerzucic do analyseTopDef
+analyseExpr (EApp line id exprs) = do 
   (VFunc t id args block) <- getFunc line id
   env <- declFunctionArgs line id exprs args
-  retVal <- local (const env) $ analyseBlock (BStmt line block)
-  case retVal of
-    (Return val, _) -> do
-      goodType <- cmpTypeVal t val
-      if goodType then
-        return val
-      else
-        throwError $ errMessage line (FuncWrongValueReturned id val)
-    (ReturnNothing, _) -> do
-      returnVoid <- cmpTypeVal t VVoid
-      if returnVoid then 
-        return VVoid
-      else
-        throwError $ errMessage line (FuncNoValueReturned id)
+  retVal <- convTypeVal t
+  return retVal
 
 analyseExpr (EString line s) = return VString
 analyseExpr (Neg line expr) = do
@@ -241,14 +236,19 @@ analyseBlock block = do
     stmt ->
       analyseBlockStmts [stmt]
 
-analyseBlockStmts :: [Stmt] -> SAM (RetInfo, Env)
+analyseBlockStmts :: [Stmt] -> SAM (RetInfo, Env) 
 analyseBlockStmts [] = do
   env <- ask
   return (ReturnNothing, env)
 analyseBlockStmts (s:ss) = do
+  (_, _, fnRetVal) <- ask
   ret <- analyseStmt s
   case ret of
-    (Return val, env) -> return (Return val, env)
+    (Return val, env) -> 
+      if val /= fnRetVal then
+        throwError $ errMessage (hasPosition s) (FuncWrongValueReturned val)
+      else 
+        return (Return val, env)
     (ReturnNothing, env) -> do
       local (const env) $ analyseBlockStmts ss
 
@@ -322,7 +322,7 @@ analyseStmt (VRet line) = do
   env <- ask
   return (Return VVoid, env)
 
-analyseStmt (Cond line expr block) = do
+analyseStmt (Cond line expr block) = do 
   analyseBoolCondition line expr
   env <- ask
   case expr of 
@@ -335,7 +335,7 @@ analyseStmt (Cond line expr block) = do
       local (const env) $ analyseBlock block 
       return (ReturnNothing, env) 
 
-analyseStmt (CondElse line expr block1 block2) = do
+analyseStmt (CondElse line expr block1 block2) = do 
   analyseBoolCondition line expr
   env <- ask
   case expr of
@@ -357,8 +357,8 @@ analyseStmt (CondElse line expr block1 block2) = do
               return (ReturnNothing, env)
             _ -> return (retVal1, env)
 
-analyseStmt (While line expr block) = do
-  analyseBoolCondition line expr
+analyseStmt (While line expr block) = do 
+  analyseBoolCondition line expr         -- todo moze odpalic jako ifa
   env <- ask
   case expr of 
     ELitTrue _ -> do

@@ -22,7 +22,7 @@ data SemanticAnalysisException
     | StringOpTypeMismatch
     | NonIntArgument
     | NonBoolArgument
-    | FuncWrongValueReturned Ident Val
+    | FuncWrongValueReturned Val
     | FuncNoValueReturned Ident
     | DeclTypeMismatch Ident
     | ConditionNonBoolean
@@ -37,7 +37,7 @@ instance Show SemanticAnalysisException where
   show (OpTypeMismatch val) = "values should be " ++ show val ++ " in operator"
   show NonIntArgument = "argument should be integer"
   show NonBoolArgument = "argument should be boolean"
-  show (FuncWrongValueReturned ident val) = "function " ++ show ident ++ " shouldn't return " ++ show val
+  show (FuncWrongValueReturned val) = "function should return " ++ show val
   show (FuncNoValueReturned ident) = "function " ++ show ident ++ " should return some value"
   show (DeclTypeMismatch ident) = "variable " ++ show ident ++ " should be defined with different type"
   show ConditionNonBoolean = "condition should be boolean" 
