@@ -9,7 +9,14 @@ import Control.Monad.Reader
 import Control.Monad.Except
 import Data.Maybe
 
--- todo nie działa na good015.lat
+-- run analysis from main --
+
+runMain :: Program -> SAM ()
+runMain (Program line tds) = do
+  env <- addTopDefs $ tds ++ libraryFunctions line
+  local (const env) $ getFunc line (Ident "main") -- check main existence
+  local (const env) $ analyseTopDefs tds
+  return ()
 
 -- memory management -- 
 
@@ -22,15 +29,15 @@ insertValue loc val = do
   store' <- gets (Map.insert loc val)
   put store'
 
-declareVar :: BNFC'Position -> Ident -> Val -> SAM ValEnv
-declareVar line id val = do
+declareVar :: BNFC'Position -> Bool -> Ident -> Val -> SAM ValEnv
+declareVar line ignoreRedeclaration id val = do
   (valEnv, _, _) <- ask
-  if notMember id valEnv then do 
+  if (notMember id valEnv) || ignoreRedeclaration then do 
     loc <- alloc
     valEnv' <- asks (Map.insert id loc . fst3)
     insertValue loc val
     return valEnv'
-  else
+  else do
     throwError $ errMessage line (VariableRedeclared id)
 
 declareFunc :: Ident -> Func -> SAM FuncEnv
@@ -79,14 +86,6 @@ libraryFunctions l =
     FnDef l (Void l) (Ident "error") [] (Block l []),
     FnDef l (Int l) (Ident "readInt") [] (Block l [Ret l (ELitInt l 0)]),
     FnDef l (Str l) (Ident "readString") [] (Block l [Ret l (EString l "")])]
-
--- run analysis from main --
-
-runMain :: Program -> SAM ()
-runMain (Program line tds) = do
-  env <- addTopDefs $ tds ++ libraryFunctions line
-  local (const env) $ analyseTopDefs tds
-  return ()
 
 -- TopDef --
 
@@ -138,7 +137,7 @@ declFunctionArgs line id (e:xe) [] = throwError $ errMessage line (FuncArgsNumbe
 declFunctionArgs line id (e:xe) ((Arg line2 t id2):xa) = do
   v <- analyseExpr e
   (_, funcEnv, fnRetVal) <- ask
-  valEnv' <- declareVar line2 id2 v
+  valEnv' <- declareVar line2 True id2 v
   local (const (valEnv', funcEnv, fnRetVal)) $ declFunctionArgs line id xe xa
 
 analyseValInTwoExpr :: BNFC'Position -> Val -> Expr -> Expr -> SAM ()
@@ -259,14 +258,14 @@ declItem t (NoInit line id) = do
     Int line2 -> return VInt
     Bool line2 -> return VBool
     Str line2 -> return VString
-  valEnv <- declareVar line id n
+  valEnv <- declareVar line False id n
   return (valEnv, funcEnv, fnRetVal)
 declItem t (Init line id e) = do
   (_, funcEnv, fnRetVal) <- ask
   n <- analyseExpr e
   goodTypes <- cmpTypeVal t n
   if goodTypes then do
-    valEnv <- declareVar line id n
+    valEnv <- declareVar line False id n
     return (valEnv, funcEnv, fnRetVal)
   else
     throwError $ errMessage line (DeclTypeMismatch id)

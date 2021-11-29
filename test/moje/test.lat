@@ -1,16 +1,11 @@
-
-boolean f(int x) {
-  if (x > 2) 
-    return true;
-  else  
-    printInt(3);
-  return false;
+int main () {
+  printInt(ev(17)) ;
+  return 0 ;
 }
 
-int main() {
-  if (f(3)) {
-    printString("OK");
-  }
-  return 0;
+int ev (int y) {
+  if (y > 0)
+    return ev (y-2) ;
+  else
+    return 1;
 }
-

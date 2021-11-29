@@ -13,8 +13,7 @@ errMessage line exception =
       "ERROR\n " ++ show exception
 
 data SemanticAnalysisException
-    = MainUndeclared
-    | FunctionUndeclared Ident
+    = FunctionUndeclared Ident
     | VariableUndeclared Ident
     | FuncArgsNumberMismatch Ident
     | OpTypeMismatch Val
@@ -30,7 +29,6 @@ data SemanticAnalysisException
     | AssTypeMismatch Ident
 
 instance Show SemanticAnalysisException where
-  show MainUndeclared = "main() undeclared"
   show (FunctionUndeclared ident) = "function " ++ show ident ++ " undeclared"
   show (VariableUndeclared ident) = "variable " ++ show ident ++ " undeclared"
   show (FuncArgsNumberMismatch ident) = "function " ++ show ident ++ " called with wrong number of arguments"
@@ -42,7 +40,7 @@ instance Show SemanticAnalysisException where
   show (DeclTypeMismatch ident) = "variable " ++ show ident ++ " should be defined with different type"
   show ConditionNonBoolean = "condition should be boolean" 
   show (VariableRedeclared ident) = "variable " ++ show ident ++ " redeclared"
-  show (AssTypeMismatch ident) = "variable " ++ show ident ++ " should be assigned with different value" 
+  show (AssTypeMismatch ident) = "variable " ++ show ident ++ " should be assigned with different type" 
 
 
 
