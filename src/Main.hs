@@ -25,6 +25,9 @@ main = do
           hPutStrLn stderr $ "ERROR\n" ++ errMessage
           exitFailure
         Right tree -> do
-          runSemanticAnalysis tree
-          putStrLn "OK\n"
-          exitSuccess
+          (output, _) <- runSemanticAnalysis tree
+          case output of
+            Left message -> hPutStrLn stderr message
+            Right _ -> do
+                putStrLn "OK\n"
+                exitSuccess

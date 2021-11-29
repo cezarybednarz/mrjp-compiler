@@ -3,7 +3,8 @@ boolean f(int x) {
   if (x > 2) 
     return true;
   else  
-    return false;
+    printInt(3);
+  return false;
 }
 
 int main() {

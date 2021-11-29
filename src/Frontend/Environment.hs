@@ -76,3 +76,7 @@ debug = do
   liftIO $ print $ "funcs:    " ++ show m2
   liftIO $ print $ "store:    " ++ show store
   liftIO $ print "---------"
+
+debugStr :: String -> SAM () 
+debugStr str = 
+  liftIO $ print str

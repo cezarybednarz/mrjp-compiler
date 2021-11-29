@@ -121,7 +121,7 @@ analyseTopDef (FnDef line t id args b) = do
     VVoid -> return ()          -- ok, void 
     _ ->                        
       case blockRetVal of 
-        ReturnNothing ->        -- error, expecting to return some value
+        ReturnNothing -> do     -- error, expecting to return some value
           throwError $ errMessage line (FuncNoValueReturned id)
         _ ->
           return ()             -- ok, good value returned (value checked before in analyseBlock)
@@ -244,9 +244,9 @@ analyseBlockStmts (s:ss) = do
   (_, _, fnRetVal) <- ask
   ret <- analyseStmt s
   case ret of
-    (Return val, env) -> 
-      if val /= fnRetVal then
-        throwError $ errMessage (hasPosition s) (FuncWrongValueReturned val)
+    (Return val, env) -> do
+      if val /= fnRetVal then do
+        throwError $ errMessage (hasPosition s) (FuncWrongValueReturned fnRetVal)
       else 
         return (Return val, env)
     (ReturnNothing, env) -> do
