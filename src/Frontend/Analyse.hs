@@ -9,7 +9,9 @@ import Control.Monad.Reader
 import Control.Monad.Except
 import Data.Maybe
 
--- Memory Management -- 
+-- todo nie działa na good015.lat
+
+-- memory management -- 
 
 alloc :: SAM Loc
 alloc = do
@@ -22,10 +24,10 @@ insertValue loc val = do
 
 declareVar :: BNFC'Position -> Ident -> Val -> SAM ValEnv
 declareVar line id val = do
-  (valEnv, _) <- ask
+  (valEnv, _, _) <- ask
   if notMember id valEnv then do 
     loc <- alloc
-    valEnv' <- asks (Map.insert id loc . fst)
+    valEnv' <- asks (Map.insert id loc . fst3)
     insertValue loc val
     return valEnv'
   else
@@ -33,7 +35,7 @@ declareVar line id val = do
 
 declareFunc :: Ident -> Func -> SAM FuncEnv
 declareFunc id func = do
-  asks (Map.insert id func . snd)
+  asks (Map.insert id func . snd3)
 
 analyseReassignment :: BNFC'Position -> Ident -> Loc -> Val -> SAM ()
 analyseReassignment line id loc val = do
@@ -44,14 +46,14 @@ analyseReassignment line id loc val = do
 
 getFunc :: BNFC'Position -> Ident -> SAM Func
 getFunc line id = do
-  func <- asks (Map.lookup id . snd)
+  func <- asks (Map.lookup id . snd3)
   case func of
     Just l -> return l
     Nothing -> throwError $ errMessage line (FunctionUndeclared id)
 
 getIdentLoc :: BNFC'Position -> Ident -> SAM Loc
 getIdentLoc line id = do
-  loc <- asks (Map.lookup id . fst)
+  loc <- asks (Map.lookup id . fst3)
   case loc of
     Just l -> return l
     Nothing -> throwError $ errMessage line (VariableUndeclared id)
@@ -75,29 +77,50 @@ libraryFunctions l =
   [ FnDef l (Void l) (Ident "printInt") [Arg l (Int l) (Ident "n")] (Block l []),
     FnDef l (Void l) (Ident "printString") [Arg l (Str l) (Ident "s")] (Block l []),
     FnDef l (Void l) (Ident "error") [] (Block l []),
-    FnDef l (Int l) (Ident "readInt") [] (Block l []),
-    FnDef l (Str l) (Ident "readString") [] (Block l []) ]
+    FnDef l (Int l) (Ident "readInt") [] (Block l [Ret l (ELitInt l 0)]),
+    FnDef l (Str l) (Ident "readString") [] (Block l [Ret l (EString l "")])]
 
 -- run analysis from main --
 
-runMain :: Program -> SAM Val
+runMain :: Program -> SAM ()
 runMain (Program line tds) = do
   env <- addTopDefs $ tds ++ libraryFunctions line
-  local (const env) $ analyseExpr $ EApp line (Ident "main") []
+  local (const env) $ analyseTopDefs tds
+  return ()
 
 -- TopDef --
 
 addTopDef :: TopDef -> SAM Env
 addTopDef (FnDef line t id args b) = do
-  (valEnv, _) <- ask
+  (valEnv, _, fnRetVal) <- ask
   funcEnv <- declareFunc id (VFunc t id args b)
-  return (valEnv, funcEnv)
+  return (valEnv, funcEnv, fnRetVal)
 
 addTopDefs :: [TopDef] -> SAM Env
 addTopDefs [] = ask
 addTopDefs (def:ds) = do
   newEnv <- addTopDef def
   local (const newEnv) $ addTopDefs ds
+
+convArgExpr :: Arg -> SAM Expr
+convArgExpr (Arg _ t _) =
+  case t of 
+    (Bool _) -> return $ ELitTrue Nothing
+    (Int _) -> return $ ELitInt Nothing 0
+    (Str _) -> return $ EString Nothing ""
+    _ -> throwError "compiler internal error: convArgExpr"
+
+analyseTopDef :: TopDef -> SAM ()
+analyseTopDef (FnDef line t id args b) = do
+  argExprs <- mapM convArgExpr args
+  fnRetVal <- convTypeVal t
+  (valEnv, funcEnv, _) <- declFunctionArgs line id argExprs args
+  retVal <- local (const (valEnv, funcEnv, fnRetVal)) $ analyseBlock (BStmt line b)
+  -- todo
+  return ()
+
+analyseTopDefs :: [TopDef] -> SAM [()]
+analyseTopDefs = mapM analyseTopDef
 
 -- Expr Helpers --
 
@@ -107,9 +130,9 @@ declFunctionArgs line id [] (a:xa) = throwError $ errMessage line (FuncArgsNumbe
 declFunctionArgs line id (e:xe) [] = throwError $ errMessage line (FuncArgsNumberMismatch id)
 declFunctionArgs line id (e:xe) ((Arg line2 t id2):xa) = do
   v <- analyseExpr e
-  (_, funcEnv) <- ask
+  (_, funcEnv, fnRetVal) <- ask
   valEnv' <- declareVar line2 id2 v
-  local (const (valEnv', funcEnv)) $ declFunctionArgs line id xe xa
+  local (const (valEnv', funcEnv, fnRetVal)) $ declFunctionArgs line id xe xa
 
 analyseValInTwoExpr :: BNFC'Position -> Val -> Expr -> Expr -> SAM ()
 analyseValInTwoExpr line val expr1 expr2 = do
@@ -133,26 +156,23 @@ analyseOneBoolExpr line expr1 = do
       return ()
     _ -> throwError $ errMessage line NonBoolArgument
 
-cmpTypeVal :: Type -> Val -> SAM Bool
-cmpTypeVal t val = do
+convTypeVal :: Type -> SAM Val
+convTypeVal t = do
   case t of
     Int _ ->
-      case val of
-      VInt -> return True
-      _ -> return False
+      return VInt
     Bool _ ->
-      case val of
-      VBool -> return True
-      _ -> return False
+      return VBool
     Str _ ->
-      case val of
-      VString -> return True
-      _ -> return False
+      return VString
     Void _ ->
-      case val of
-      VVoid -> return True
-      _ -> return False
-    _ -> throwError "compiler internal error: cmpTypeVal"
+      return VVoid
+    _ -> throwError "compiler internal error: convTypeVal"
+
+cmpTypeVal :: Type -> Val -> SAM Bool
+cmpTypeVal t val = do
+  tVal <- convTypeVal t
+  return $ tVal == val 
 
 -- Analyse Expr --
 
@@ -162,7 +182,7 @@ analyseExpr (ELitInt line i) = return VInt
 analyseExpr (ELitTrue line) = return VBool
 analyseExpr (ELitFalse line) = return VBool
 
-analyseExpr (EApp line id exprs) = do
+analyseExpr (EApp line id exprs) = do -- todo odchudzić to i przerzucic do analyseTopDef
   (VFunc t id args block) <- getFunc line id
   env <- declFunctionArgs line id exprs args
   retVal <- local (const env) $ analyseBlock (BStmt line block)
@@ -234,20 +254,20 @@ analyseBlockStmts (s:ss) = do
 
 declItem :: Type -> Item -> SAM Env
 declItem t (NoInit line id) = do
-  (_, funcEnv) <- ask
+  (_, funcEnv, fnRetVal) <- ask
   n <- case t of
     Int line2 -> return VInt
     Bool line2 -> return VBool
     Str line2 -> return VString
   valEnv <- declareVar line id n
-  return (valEnv, funcEnv)
+  return (valEnv, funcEnv, fnRetVal)
 declItem t (Init line id e) = do
-  (_, funcEnv) <- ask
+  (_, funcEnv, fnRetVal) <- ask
   n <- analyseExpr e
   goodTypes <- cmpTypeVal t n
   if goodTypes then do
     valEnv <- declareVar line id n
-    return (valEnv, funcEnv)
+    return (valEnv, funcEnv, fnRetVal)
   else
     throwError $ errMessage line (DeclTypeMismatch id)
 
@@ -309,8 +329,11 @@ analyseStmt (Cond line expr block) = do
     ELitTrue _ -> do
       (retVal, _) <- local (const env) $ analyseBlock block
       return (retVal, env)
-    _ ->
-      return (ReturnNothing, env) -- todo analizowac blok
+    ELitFalse _ -> 
+      return (ReturnNothing, env)
+    _ -> do
+      local (const env) $ analyseBlock block 
+      return (ReturnNothing, env) 
 
 analyseStmt (CondElse line expr block1 block2) = do
   analyseBoolCondition line expr
@@ -322,8 +345,17 @@ analyseStmt (CondElse line expr block1 block2) = do
     ELitFalse _ -> do
       (retVal, _) <- local (const env) $ analyseBlock block2
       return (retVal, env)
-    _ -> 
-      return (ReturnNothing, env) -- todo analizować bloki
+    _ -> do
+      (retVal1, _) <- local (const env) $ analyseBlock block1
+      (retVal2, _) <- local (const env) $ analyseBlock block2
+      case retVal1 of 
+        ReturnNothing ->
+          return (ReturnNothing, env)
+        _ -> 
+          case retVal2 of 
+            ReturnNothing -> 
+              return (ReturnNothing, env)
+            _ -> return (retVal1, env)
 
 analyseStmt (While line expr block) = do
   analyseBoolCondition line expr
@@ -334,8 +366,9 @@ analyseStmt (While line expr block) = do
       case retVal of
         Return val -> return (Return val, env)
         _ -> return (ReturnNothing, env)
-    _ ->
-      return (ReturnNothing, env) -- todo analizowac blok
+    _ -> do
+      local (const env) $ analyseBlock block 
+      return (ReturnNothing, env)
 
 analyseStmt (SExp line expr) = do
   env <- ask

@@ -1,10 +1,15 @@
 
-void f(int x) {
-  y = y + y;
+boolean f(int x) {
+  if (x > 2) 
+    return true;
+  else  
+    return false;
 }
 
 int main() {
-  f(3);
+  if (f(3)) {
+    printString("OK");
+  }
   return 0;
 }
 
