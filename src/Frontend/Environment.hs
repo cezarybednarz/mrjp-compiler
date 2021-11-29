@@ -9,23 +9,28 @@ import Data.Maybe
 
 -- enviroment --
 
+type Scope = Int
 type Loc = Int
-type ValEnv = Map.Map Ident Loc
+
+type ValEnv = Map.Map Ident (Loc, Scope)
 type FuncEnv = Map.Map Ident Func
 type FnRetVal = Val
-type Env = (ValEnv, FuncEnv, FnRetVal) -- todo
+type Env = (ValEnv, FuncEnv, FnRetVal, Scope) 
+
 type Store = Map.Map Loc Val
 
 -- tuple selection for Env -- 
-fst3 :: (a, b, c) -> a
-fst3 (x, _, _) = x
+fst4 :: (a, b, c, d) -> a
+fst4 (x, _, _, _) = x
 
-snd3 :: (a, b, c) -> b
-snd3 (_, x, _) = x
+snd4 :: (a, b, c, d) -> b
+snd4 (_, x, _, _) = x
 
-thrd3 :: (a, b, c) -> c
-thrd3 (_, _, x) = x
+thrd4 :: (a, b, c, d) -> c
+thrd4 (_, _, x, _) = x
 
+frth4 :: (a, b, c, d) -> d
+frth4 (_, _, _, x) = x
 
 -- semantic analysis monad --
 
@@ -63,20 +68,22 @@ initStore :: Store
 initStore = Map.empty
 
 initEnv :: Env
-initEnv = (Map.empty, Map.empty, VInt)
+initEnv = (Map.empty, Map.empty, VInt, 0)
 
 -- !debug --
 
 debug :: SAM ()
 debug = do
-  (m1, m2, fnRetVal) <- ask
+  (m1, m2, fnRetVal, scope) <- ask
   store <- get
-  liftIO $ print $ "fnRetVal: " ++ show fnRetVal
   liftIO $ print $ "vars:     " ++ show m1
   liftIO $ print $ "funcs:    " ++ show m2
-  liftIO $ print $ "store:    " ++ show store
+  liftIO $ print $ "fnRetVal: " ++ show fnRetVal
+  liftIO $ print $ "scope:    " ++ show scope
   liftIO $ print "---------"
-
+  liftIO $ print $ "store:    " ++ show store
+  liftIO $ print "---------\n"
+  
 debugStr :: String -> SAM () 
 debugStr str = 
   liftIO $ print str

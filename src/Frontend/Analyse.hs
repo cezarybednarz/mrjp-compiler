@@ -30,19 +30,26 @@ insertValue loc val = do
   put store'
 
 declareVar :: BNFC'Position -> Bool -> Ident -> Val -> SAM ValEnv
-declareVar line ignoreRedeclaration id val = do
-  (valEnv, _, _) <- ask
-  if (notMember id valEnv) || ignoreRedeclaration then do 
+declareVar line recursive id val = do
+  (valEnv, _, _, scope1) <- ask
+  if notMember id valEnv || recursive then do 
     loc <- alloc
-    valEnv' <- asks (Map.insert id loc . fst3)
+    valEnv' <- asks (Map.insert id (loc, scope1) . fst4)
     insertValue loc val
     return valEnv'
   else do
-    throwError $ errMessage line (VariableRedeclared id)
+    (Just (loc, scope2)) <- asks (Map.lookup id . fst4)
+    if scope1 == scope2 then do
+      throwError $ errMessage line (VariableRedeclared id)
+    else do
+      valEnv' <- asks (Map.insert id (loc, scope1) . fst4)
+      insertValue loc val
+      return valEnv'
+      
 
 declareFunc :: Ident -> Func -> SAM FuncEnv
 declareFunc id func = do
-  asks (Map.insert id func . snd3)
+  asks (Map.insert id func . snd4)
 
 analyseReassignment :: BNFC'Position -> Ident -> Loc -> Val -> SAM ()
 analyseReassignment line id loc val = do
@@ -53,16 +60,16 @@ analyseReassignment line id loc val = do
 
 getFunc :: BNFC'Position -> Ident -> SAM Func
 getFunc line id = do
-  func <- asks (Map.lookup id . snd3)
+  func <- asks (Map.lookup id . snd4)
   case func of
     Just l -> return l
     Nothing -> throwError $ errMessage line (FunctionUndeclared id)
 
 getIdentLoc :: BNFC'Position -> Ident -> SAM Loc
 getIdentLoc line id = do
-  loc <- asks (Map.lookup id . fst3)
+  loc <- asks (Map.lookup id . fst4)
   case loc of
-    Just l -> return l
+    Just (l, _) -> return l
     Nothing -> throwError $ errMessage line (VariableUndeclared id)
 
 getLocVal :: BNFC'Position -> Loc -> SAM Val
@@ -91,9 +98,9 @@ libraryFunctions l =
 
 addTopDef :: TopDef -> SAM Env
 addTopDef (FnDef line t id args b) = do
-  (valEnv, _, fnRetVal) <- ask
+  (valEnv, _, fnRetVal, scope) <- ask
   funcEnv <- declareFunc id (VFunc t id args b)
-  return (valEnv, funcEnv, fnRetVal)
+  return (valEnv, funcEnv, fnRetVal, scope)
 
 addTopDefs :: [TopDef] -> SAM Env
 addTopDefs [] = ask
@@ -113,9 +120,9 @@ analyseTopDef :: TopDef -> SAM ()
 analyseTopDef (FnDef line t id args b) = do
   argExprs <- mapM convArgExpr args
   fnRetVal <- convTypeVal t
-  (_, funcEnv, _) <- ask
-  (valEnv, _, _) <- declFunctionArgs line id argExprs args
-  (blockRetVal, _) <- local (const (valEnv, funcEnv, fnRetVal)) $ analyseBlock (BStmt line b)  
+  (_, funcEnv, _, scope) <- ask
+  (valEnv, _, _, _) <- declFunctionArgs line id argExprs args
+  (blockRetVal, _) <- local (const (valEnv, funcEnv, fnRetVal, scope)) $ analyseBlock (BStmt line b)  
   case fnRetVal of 
     VVoid -> return ()          -- ok, void 
     _ ->                        
@@ -135,10 +142,14 @@ declFunctionArgs _ _ [] [] = ask
 declFunctionArgs line id [] (a:xa) = throwError $ errMessage line (FuncArgsNumberMismatch id)
 declFunctionArgs line id (e:xe) [] = throwError $ errMessage line (FuncArgsNumberMismatch id)
 declFunctionArgs line id (e:xe) ((Arg line2 t id2):xa) = do
-  v <- analyseExpr e
-  (_, funcEnv, fnRetVal) <- ask
-  valEnv' <- declareVar line2 True id2 v
-  local (const (valEnv', funcEnv, fnRetVal)) $ declFunctionArgs line id xe xa
+  val <- analyseExpr e
+  argVal <- convTypeVal t
+  if val /= argVal then 
+    throwError $ errMessage line (ArgTypeMismatch id id2)
+  else do
+    (_, funcEnv, fnRetVal, scope) <- ask
+    valEnv' <- declareVar line2 True id2 val
+    local (const (valEnv', funcEnv, fnRetVal, scope)) $ declFunctionArgs line id xe xa
 
 analyseValInTwoExpr :: BNFC'Position -> Val -> Expr -> Expr -> SAM ()
 analyseValInTwoExpr line val expr1 expr2 = do
@@ -229,18 +240,19 @@ analyseExpr (EOr line expr1 expr2) = do
 
 analyseBlock :: Stmt -> SAM (RetInfo, Env) 
 analyseBlock block = do
+  (valEnv, funcEnv, fnRetVal, scope) <- ask
   case block of
     BStmt line (Block line2 b) -> 
-      analyseBlockStmts b
+      local (const (valEnv, funcEnv, fnRetVal, scope+1)) $ analyseBlockStmts b
     stmt ->
-      analyseBlockStmts [stmt]
+      local (const (valEnv, funcEnv, fnRetVal, scope+1)) $ analyseBlockStmts [stmt]
 
 analyseBlockStmts :: [Stmt] -> SAM (RetInfo, Env) 
 analyseBlockStmts [] = do
   env <- ask
   return (ReturnNothing, env)
 analyseBlockStmts (s:ss) = do
-  (_, _, fnRetVal) <- ask
+  (_, _, fnRetVal, _) <- ask
   ret <- analyseStmt s
   case ret of
     (Return val, env) -> do
@@ -253,20 +265,20 @@ analyseBlockStmts (s:ss) = do
 
 declItem :: Type -> Item -> SAM Env
 declItem t (NoInit line id) = do
-  (_, funcEnv, fnRetVal) <- ask
+  (_, funcEnv, fnRetVal, scope) <- ask
   n <- case t of
     Int line2 -> return VInt
     Bool line2 -> return VBool
     Str line2 -> return VString
   valEnv <- declareVar line False id n
-  return (valEnv, funcEnv, fnRetVal)
+  return (valEnv, funcEnv, fnRetVal, scope)
 declItem t (Init line id e) = do
-  (_, funcEnv, fnRetVal) <- ask
+  (_, funcEnv, fnRetVal, scope) <- ask
   n <- analyseExpr e
   goodTypes <- cmpTypeVal t n
   if goodTypes then do
     valEnv <- declareVar line False id n
-    return (valEnv, funcEnv, fnRetVal)
+    return (valEnv, funcEnv, fnRetVal, scope)
   else
     throwError $ errMessage line (DeclTypeMismatch id)
 

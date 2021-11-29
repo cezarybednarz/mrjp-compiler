@@ -27,6 +27,7 @@ data SemanticAnalysisException
     | ConditionNonBoolean
     | VariableRedeclared Ident 
     | AssTypeMismatch Ident
+    | ArgTypeMismatch Ident Ident 
 
 instance Show SemanticAnalysisException where
   show (FunctionUndeclared ident) = "function " ++ show ident ++ " undeclared"
@@ -41,6 +42,7 @@ instance Show SemanticAnalysisException where
   show ConditionNonBoolean = "condition should be boolean" 
   show (VariableRedeclared ident) = "variable " ++ show ident ++ " redeclared"
   show (AssTypeMismatch ident) = "variable " ++ show ident ++ " should be assigned with different type" 
+  show (ArgTypeMismatch ident1 ident2) = "function " ++ show ident1 ++ " should be called with different type for variable " ++ show ident2
 
 
 
