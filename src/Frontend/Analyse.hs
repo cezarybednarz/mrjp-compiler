@@ -357,18 +357,8 @@ analyseStmt (CondElse line expr block1 block2) = do
               return (ReturnNothing, env)
             _ -> return (retVal1, env)
 
-analyseStmt (While line expr block) = do 
-  analyseBoolCondition line expr         -- todo moze odpalic jako ifa
-  env <- ask
-  case expr of 
-    ELitTrue _ -> do
-      (retVal, _) <- local (const env) $ analyseBlock block
-      case retVal of
-        Return val -> return (Return val, env)
-        _ -> return (ReturnNothing, env)
-    _ -> do
-      local (const env) $ analyseBlock block 
-      return (ReturnNothing, env)
+analyseStmt (While line expr block) = 
+  analyseStmt (Cond line expr block)
 
 analyseStmt (SExp line expr) = do
   env <- ask
