@@ -1,12 +1,6 @@
 
-void f(int y) {
+void f(int x) {
   y = y + y;
-  if (y == 2) {
-    return;
-  }
-  else {
-    return 3;
-  }
 }
 
 int main() {

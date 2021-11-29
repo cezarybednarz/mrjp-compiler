@@ -1,2 +1,5 @@
 #!/bin/bash
+
+cat "$1"
+echo
 cabal run compiler -- "$1"
