@@ -27,7 +27,9 @@ main = do
         Right tree -> do
           (output, _) <- runSemanticAnalysis tree
           case output of
-            Left message -> hPutStrLn stderr message
+            Left message -> do
+              hPutStrLn stderr message
+              exitFailure
             Right _ -> do
-                hPutStrLn stderr "OK\n"
-                exitSuccess
+              hPutStrLn stderr "OK\n"
+              exitSuccess
