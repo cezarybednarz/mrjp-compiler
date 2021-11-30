@@ -1,5 +1,2 @@
 #!/bin/bash
-
-cat "$1"
-echo
-cabal run compiler -- "$1"
+./dist-newstyle/compiler "$1" 

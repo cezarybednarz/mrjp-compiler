@@ -29,5 +29,5 @@ main = do
           case output of
             Left message -> hPutStrLn stderr message
             Right _ -> do
-                putStrLn "OK\n"
+                hPutStrLn stderr "OK\n"
                 exitSuccess

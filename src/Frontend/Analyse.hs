@@ -202,8 +202,7 @@ analyseExpr (ELitFalse line) = return VBool
 analyseExpr (EApp line id exprs) = do 
   (VFunc t id args block) <- getFunc line id
   env <- declFunctionArgs line id exprs args
-  retVal <- convTypeVal t
-  return retVal
+  convTypeVal t
 
 analyseExpr (EString line s) = return VString
 analyseExpr (Neg line expr) = do
