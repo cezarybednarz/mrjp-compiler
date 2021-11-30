@@ -1,15 +1,15 @@
 module Frontend.Exception where
 
-import Frontend.Environment
-import Latte.Abs
-import Control.Monad.Except
+import           Control.Monad.Except
+import           Frontend.Environment
+import           Latte.Abs
 
 errMessage :: BNFC'Position -> SemanticAnalysisException -> String
 errMessage line exception =
   case line of
-    Just (line, col) -> 
+    Just (line, col) ->
       "ERROR\nline " ++ show line ++ " column " ++ show col ++ ": " ++ show exception
-    Nothing -> 
+    Nothing ->
       "ERROR\n " ++ show exception
 
 data SemanticAnalysisException
@@ -25,9 +25,9 @@ data SemanticAnalysisException
     | FuncNoValueReturned Ident
     | DeclTypeMismatch Ident
     | ConditionNonBoolean
-    | VariableRedeclared Ident 
+    | VariableRedeclared Ident
     | AssTypeMismatch Ident
-    | ArgTypeMismatch Ident Ident 
+    | ArgTypeMismatch Ident Ident
 
 instance Show SemanticAnalysisException where
   show (FunctionUndeclared ident) = "function " ++ show ident ++ " undeclared"
@@ -39,9 +39,9 @@ instance Show SemanticAnalysisException where
   show (FuncWrongValueReturned val) = "function should return " ++ show val
   show (FuncNoValueReturned ident) = "function " ++ show ident ++ " should return some value"
   show (DeclTypeMismatch ident) = "variable " ++ show ident ++ " should be defined with different type"
-  show ConditionNonBoolean = "condition should be boolean" 
+  show ConditionNonBoolean = "condition should be boolean"
   show (VariableRedeclared ident) = "variable " ++ show ident ++ " redeclared"
-  show (AssTypeMismatch ident) = "variable " ++ show ident ++ " should be assigned with different type" 
+  show (AssTypeMismatch ident) = "variable " ++ show ident ++ " should be assigned with different type"
   show (ArgTypeMismatch ident1 ident2) = "function " ++ show ident1 ++ " should be called with different type for variable " ++ show ident2
 
 

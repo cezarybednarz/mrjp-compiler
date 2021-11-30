@@ -1,12 +1,12 @@
 module Main where
 
-import System.Environment ( getArgs )
-import Data.Map.Lazy as LazyMap ()
-import System.Exit ( exitFailure, exitSuccess )
-import Latte.Par ( pProgram, myLexer )
-import System.IO ( stderr, hPutStrLn, putStrLn )
-import Frontend.Run 
-import Frontend.Environment
+import           Data.Map.Lazy        as LazyMap ()
+import           Frontend.Environment
+import           Frontend.Run
+import           Latte.Par            (myLexer, pProgram)
+import           System.Environment   (getArgs)
+import           System.Exit          (exitFailure, exitSuccess)
+import           System.IO            (hPutStrLn, putStrLn, stderr)
 
 
 printUsage :: IO ()

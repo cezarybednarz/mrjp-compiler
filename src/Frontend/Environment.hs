@@ -1,11 +1,11 @@
 module Frontend.Environment where
 
-import Latte.Abs
-import Data.Map as Map 
-import Control.Monad.State
-import Control.Monad.Reader
-import Control.Monad.Except
-import Data.Maybe
+import           Control.Monad.Except
+import           Control.Monad.Reader
+import           Control.Monad.State
+import           Data.Map             as Map
+import           Data.Maybe
+import           Latte.Abs
 
 -- enviroment --
 
@@ -15,11 +15,11 @@ type Loc = Int
 type ValEnv = Map.Map Ident (Loc, Scope)
 type FuncEnv = Map.Map Ident Func
 type FnRetVal = Val
-type Env = (ValEnv, FuncEnv, FnRetVal, Scope) 
+type Env = (ValEnv, FuncEnv, FnRetVal, Scope)
 
 type Store = Map.Map Loc Val
 
--- tuple selection for Env -- 
+-- tuple selection for Env --
 fst4 :: (a, b, c, d) -> a
 fst4 (x, _, _, _) = x
 
@@ -52,10 +52,10 @@ instance Show Func where
   show (VFunc _ id _ _) = show id
 
 instance Show Val where
-  show VInt = show "Int"
-  show VBool = show "Bool"
+  show VInt    = show "Int"
+  show VBool   = show "Bool"
   show VString = show "String"
-  show VVoid = show "Void"
+  show VVoid   = show "Void"
 
 -- RetInfo --
 
@@ -83,7 +83,7 @@ debug = do
   liftIO $ print "---------"
   liftIO $ print $ "store:    " ++ show store
   liftIO $ print "---------\n"
-  
-debugStr :: String -> SAM () 
-debugStr str = 
+
+debugStr :: String -> SAM ()
+debugStr str =
   liftIO $ print str

@@ -1,11 +1,11 @@
 module Frontend.Run where
 
-import Latte.Abs
-import Frontend.Environment
-import Frontend.Analyse
-import Control.Monad.State
-import Control.Monad.Reader
-import Control.Monad.Except
+import           Control.Monad.Except
+import           Control.Monad.Reader
+import           Control.Monad.State
+import           Frontend.Analyse
+import           Frontend.Environment
+import           Latte.Abs
 
 -- run Typechecker Monad --
 
