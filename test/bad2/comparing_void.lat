@@ -1,0 +1,7 @@
+//sprawdziłbym także porównania na void'ach (po dorobieniu
+//  porównywania stringów)
+
+int main() {
+  // todo
+  return 0;
+}

@@ -3,6 +3,7 @@ module Frontend.Exception where
 import           Control.Monad.Except
 import           Frontend.Environment
 import           Latte.Abs
+import Latte.Print
 
 errMessage :: BNFC'Position -> SemanticAnalysisException -> String
 errMessage line exception =
@@ -30,19 +31,19 @@ data SemanticAnalysisException
     | ArgTypeMismatch Ident Ident
 
 instance Show SemanticAnalysisException where
-  show (FunctionUndeclared ident) = "function " ++ show ident ++ " undeclared"
-  show (VariableUndeclared ident) = "variable " ++ show ident ++ " undeclared"
-  show (FuncArgsNumberMismatch ident) = "function " ++ show ident ++ " called with wrong number of arguments"
+  show (FunctionUndeclared (Ident ident)) = "function " ++  show ident ++ " undeclared"
+  show (VariableUndeclared (Ident ident)) = "variable " ++ show ident ++ " undeclared"
+  show (FuncArgsNumberMismatch (Ident ident)) = "function " ++ show ident ++ " called with wrong number of arguments"
   show (OpTypeMismatch val) = "values should be " ++ show val ++ " in operator"
   show NonIntArgument = "argument should be integer"
   show NonBoolArgument = "argument should be boolean"
   show (FuncWrongValueReturned val) = "function should return " ++ show val
-  show (FuncNoValueReturned ident) = "function " ++ show ident ++ " should return some value"
-  show (DeclTypeMismatch ident) = "variable " ++ show ident ++ " should be defined with different type"
+  show (FuncNoValueReturned (Ident ident)) = "function " ++ show ident ++ " should return some value"
+  show (DeclTypeMismatch (Ident ident)) = "variable " ++ show ident ++ " should be defined with different type"
   show ConditionNonBoolean = "condition should be boolean"
-  show (VariableRedeclared ident) = "variable " ++ show ident ++ " redeclared"
-  show (AssTypeMismatch ident) = "variable " ++ show ident ++ " should be assigned with different type"
-  show (ArgTypeMismatch ident1 ident2) = "function " ++ show ident1 ++ " should be called with different type for variable " ++ show ident2
+  show (VariableRedeclared (Ident ident)) = "variable " ++ show ident ++ " redeclared"
+  show (AssTypeMismatch (Ident ident)) = "variable " ++ show ident ++ " should be assigned with different type"
+  show (ArgTypeMismatch (Ident ident1) (Ident ident2)) = "function " ++ show ident1 ++ " should be called with different type for variable " ++ show ident2
 
 
 

@@ -1,0 +1,6 @@
+// void variable type
+
+int main() {
+   void x;
+   return 0;
+}

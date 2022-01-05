@@ -1,0 +1,6 @@
+//main parameter
+
+int main(int y) {
+        printString("A kuku");
+        return 0 ;
+}

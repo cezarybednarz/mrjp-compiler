@@ -1,0 +1,18 @@
+// Samotna deklaracja w instrukcji warukowej
+
+int f(int x) {
+  printString("A teraz...");
+  return x+1;
+}
+
+int main() {
+
+    boolean x=true;
+
+    if (f(2)<2)
+        string x="Ala ma kota";
+
+    printString(x);
+
+    return 0;   
+}
