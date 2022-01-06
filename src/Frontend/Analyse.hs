@@ -227,7 +227,10 @@ analyseExpr (EAdd line expr1 op expr2) = do
   e <- analyseExpr expr1
   case e of
     VInt    -> analyseValInTwoExpr line VInt expr1 expr2
-    VString -> analyseValInTwoExpr line VString expr1 expr2
+    VString -> do
+      case op of 
+        Plus _ -> analyseValInTwoExpr line VString expr1 expr2
+        _ -> throwError $ errMessage line InvalidStringOperator
     _       -> analyseValInTwoExpr line VInt expr1 expr2
   return e
 analyseExpr (EAnd line expr1 expr2) = do
