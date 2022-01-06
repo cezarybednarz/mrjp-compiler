@@ -229,6 +229,7 @@ analyseExpr (ERel line expr1 op expr2) = do
   case e of
     VInt  -> analyseValInTwoExpr line VInt expr1 expr2
     VBool -> analyseValInTwoExpr line VBool expr1 expr2
+    VString -> analyseValInTwoExpr line VString expr1 expr2
     _     -> analyseValInTwoExpr line VInt expr1 expr2
   return VBool
 analyseExpr (EOr line expr1 expr2) = do
