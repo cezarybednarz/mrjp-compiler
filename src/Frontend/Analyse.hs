@@ -278,6 +278,7 @@ declItem t (NoInit line id) = do
     Int line2  -> return VInt
     Bool line2 -> return VBool
     Str line2  -> return VString
+    Void line2 -> throwError $ errMessage line2 VoidVaribaleDeclaration
   valEnv <- declareVar line False id n
   return (valEnv, funcEnv, fnRetVal, scope)
 declItem t (Init line id e) = do

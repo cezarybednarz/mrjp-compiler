@@ -31,6 +31,7 @@ data SemanticAnalysisException
     | ArgTypeMismatch Ident Ident
     | MainWrongType
     | MainWrongNumberOfArgs
+    | VoidVaribaleDeclaration
 
 instance Show SemanticAnalysisException where
   show (FunctionUndeclared (Ident ident)) = "function " ++  show ident ++ " undeclared"
@@ -48,6 +49,7 @@ instance Show SemanticAnalysisException where
   show (ArgTypeMismatch (Ident ident1) (Ident ident2)) = "function " ++ show ident1 ++ " should be called with different type for variable " ++ show ident2
   show MainWrongType = show "main should be type 'int'"
   show MainWrongNumberOfArgs = show "main shouldn't have any arguments"
+  show VoidVaribaleDeclaration = show "cannot declare void variable"
 
 
 
