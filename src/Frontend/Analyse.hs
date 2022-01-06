@@ -14,9 +14,18 @@ import           Latte.Abs
 runMain :: Program -> SAM ()
 runMain (Program line tds) = do
   env <- addTopDefs $ tds ++ libraryFunctions line
-  local (const env) $ getFunc line (Ident "main") -- check main existence
+  local (const env) $ analyseMain line
   local (const env) $ analyseTopDefs tds
   return ()
+
+-- analyse main --
+
+analyseMain :: BNFC'Position -> SAM ()
+analyseMain line = do 
+  (VFunc t _ args _) <- getFunc line (Ident "main")
+  tv <- convTypeVal t
+  when (tv /= VInt) $ throwError $ errMessage line MainWrongType
+  when (length args /= 0) $ throwError $ errMessage line MainWrongNumberOfArgs
 
 -- memory management --
 
@@ -229,7 +238,6 @@ analyseExpr (ERel line expr1 op expr2) = do
   case e of
     VInt  -> analyseValInTwoExpr line VInt expr1 expr2
     VBool -> analyseValInTwoExpr line VBool expr1 expr2
-    VString -> analyseValInTwoExpr line VString expr1 expr2
     _     -> analyseValInTwoExpr line VInt expr1 expr2
   return VBool
 analyseExpr (EOr line expr1 expr2) = do

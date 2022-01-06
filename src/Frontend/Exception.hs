@@ -29,6 +29,8 @@ data SemanticAnalysisException
     | VariableRedeclared Ident
     | AssTypeMismatch Ident
     | ArgTypeMismatch Ident Ident
+    | MainWrongType
+    | MainWrongNumberOfArgs
 
 instance Show SemanticAnalysisException where
   show (FunctionUndeclared (Ident ident)) = "function " ++  show ident ++ " undeclared"
@@ -44,6 +46,9 @@ instance Show SemanticAnalysisException where
   show (VariableRedeclared (Ident ident)) = "variable " ++ show ident ++ " redeclared"
   show (AssTypeMismatch (Ident ident)) = "variable " ++ show ident ++ " should be assigned with different type"
   show (ArgTypeMismatch (Ident ident1) (Ident ident2)) = "function " ++ show ident1 ++ " should be called with different type for variable " ++ show ident2
+  show MainWrongType = show "main should be type 'int'"
+  show MainWrongNumberOfArgs = show "main shouldn't have any arguments"
+
 
 
 
