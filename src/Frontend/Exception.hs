@@ -33,6 +33,7 @@ data SemanticAnalysisException
     | MainWrongNumberOfArgs
     | VoidVaribaleDeclaration
     | InvalidStringOperator
+    | FunctionRedeclared Ident
 
 instance Show SemanticAnalysisException where
   show (FunctionUndeclared (Ident ident)) = "function " ++  show ident ++ " undeclared"
@@ -48,10 +49,11 @@ instance Show SemanticAnalysisException where
   show (VariableRedeclared (Ident ident)) = "variable " ++ show ident ++ " redeclared"
   show (AssTypeMismatch (Ident ident)) = "variable " ++ show ident ++ " should be assigned with different type"
   show (ArgTypeMismatch (Ident ident1) (Ident ident2)) = "function " ++ show ident1 ++ " should be called with different type for variable " ++ show ident2
-  show MainWrongType = show "main should be type 'int'"
-  show MainWrongNumberOfArgs = show "main shouldn't have any arguments"
-  show VoidVaribaleDeclaration = show "cannot declare void variable"
-  show InvalidStringOperator = show "'+' is the only arithmetic operator accepted on strings"
+  show MainWrongType = "main should be type 'int'"
+  show MainWrongNumberOfArgs = "main shouldn't have any arguments"
+  show VoidVaribaleDeclaration = "cannot declare void variable"
+  show InvalidStringOperator = "'+' is the only arithmetic operator accepted on strings"
+  show (FunctionRedeclared (Ident ident)) = "cannot redeclare function " ++ show ident
 
 
 

@@ -56,9 +56,13 @@ declareVar line recursive id val = do
       return valEnv'
 
 
-declareFunc :: Ident -> Func -> SAM FuncEnv
-declareFunc id func = do
-  asks (Map.insert id func . snd4)
+declareFunc :: BNFC'Position -> Ident -> Func -> SAM FuncEnv
+declareFunc line id func = do
+  (_, funcEnv, _, _) <- ask
+  if member id funcEnv then 
+    throwError $ errMessage line (FunctionRedeclared id)
+  else
+    asks (Map.insert id func . snd4)
 
 analyseReassignment :: BNFC'Position -> Ident -> Loc -> Val -> SAM ()
 analyseReassignment line id loc val = do
@@ -108,7 +112,7 @@ libraryFunctions l =
 addTopDef :: TopDef -> SAM Env
 addTopDef (FnDef line t id args b) = do
   (valEnv, _, fnRetVal, scope) <- ask
-  funcEnv <- declareFunc id (VFunc t id args b)
+  funcEnv <- declareFunc line id (VFunc t id args b)
   return (valEnv, funcEnv, fnRetVal, scope)
 
 addTopDefs :: [TopDef] -> SAM Env
