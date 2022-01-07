@@ -246,6 +246,10 @@ analyseExpr (ERel line expr1 op expr2) = do
   case e of
     VInt  -> analyseValInTwoExpr line VInt expr1 expr2
     VBool -> analyseValInTwoExpr line VBool expr1 expr2
+    VString -> case op of 
+                 Latte.Abs.EQU _ -> analyseValInTwoExpr line VString expr1 expr2
+                 Latte.Abs.NE _ -> analyseValInTwoExpr line VString expr1 expr2
+                 _ -> throwError $ errMessage line StringInvalidRel
     _     -> analyseValInTwoExpr line VInt expr1 expr2
   return VBool
 analyseExpr (EOr line expr1 expr2) = do

@@ -34,6 +34,7 @@ data SemanticAnalysisException
     | VoidVaribaleDeclaration
     | InvalidStringOperator
     | FunctionRedeclared Ident
+    | StringInvalidRel 
 
 instance Show SemanticAnalysisException where
   show (FunctionUndeclared (Ident ident)) = "function " ++  show ident ++ " undeclared"
@@ -54,7 +55,7 @@ instance Show SemanticAnalysisException where
   show VoidVaribaleDeclaration = "cannot declare void variable"
   show InvalidStringOperator = "'+' is the only arithmetic operator accepted on strings"
   show (FunctionRedeclared (Ident ident)) = "cannot redeclare function " ++ show ident
-
+  show StringInvalidRel = "'==' and '!=' are the only valid relation operators on strings"
 
 
 

@@ -1,6 +1,6 @@
 int main() {
     string a = "alamakota" + "a";
-    if ("a"=="alamakota") {
+    if ("a" + "a"=="alamakota") {
         printString("OK");
     } else {
         printString("ERROR");
