@@ -38,10 +38,10 @@ insertValue loc val = do
   store' <- gets (Map.insert loc val)
   put store'
 
-declareVar :: BNFC'Position -> Bool -> Ident -> Val -> SAM ValEnv
-declareVar line recursive id val = do
+declareVar :: BNFC'Position -> Ident -> Val -> SAM ValEnv
+declareVar line id val = do
   (valEnv, _, _, scope1) <- ask
-  if notMember id valEnv || recursive then do
+  if notMember id valEnv then do
     loc <- alloc
     valEnv' <- asks (Map.insert id (loc, scope1) . fst4)
     insertValue loc val
@@ -160,8 +160,8 @@ declFunctionArgs line id (e:xe) ((Arg line2 t id2):xa) = do
   if val /= argVal then
     throwError $ errMessage line (ArgTypeMismatch id id2)
   else do
-    (_, funcEnv, fnRetVal, scope) <- ask
-    valEnv' <- declareVar line2 True id2 val
+    (valEnv, funcEnv, fnRetVal, scope) <- ask
+    valEnv' <- local (const (valEnv, funcEnv, fnRetVal, scope+1)) $ declareVar line2 id2 val
     local (const (valEnv', funcEnv, fnRetVal, scope)) $ declFunctionArgs line id xe xa
 
 analyseValInTwoExpr :: BNFC'Position -> Val -> Expr -> Expr -> SAM ()
@@ -286,14 +286,14 @@ declItem t (NoInit line id) = do
     Bool line2 -> return VBool
     Str line2  -> return VString
     Void line2 -> throwError $ errMessage line2 VoidVaribaleDeclaration
-  valEnv <- declareVar line False id n
+  valEnv <- declareVar line id n
   return (valEnv, funcEnv, fnRetVal, scope)
 declItem t (Init line id e) = do
   (_, funcEnv, fnRetVal, scope) <- ask
   n <- analyseExpr e
   goodTypes <- cmpTypeVal t n
   if goodTypes then do
-    valEnv <- declareVar line False id n
+    valEnv <- declareVar line id n
     return (valEnv, funcEnv, fnRetVal, scope)
   else
     throwError $ errMessage line (DeclTypeMismatch id)
