@@ -1,7 +1,17 @@
 //sprawdziłbym także porównania na void'ach (po dorobieniu
 //  porównywania stringów)
+void f() {
+  return;
+}
 
+void x() {
+  return;
+}
+  
 int main() {
   // todo
+  if (f() == x()) {
+    printString("xd");
+  }
   return 0;
 }

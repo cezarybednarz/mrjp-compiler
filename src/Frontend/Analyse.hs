@@ -51,6 +51,7 @@ declareVar line id val = do
     if scope1 == scope2 then do
       throwError $ errMessage line (VariableRedeclared id)
     else do
+      loc <- alloc
       valEnv' <- asks (Map.insert id (loc, scope1) . fst4)
       insertValue loc val
       return valEnv'
@@ -257,7 +258,7 @@ analyseBlock :: Stmt -> SAM (RetInfo, Env)
 analyseBlock block = do
   (valEnv, funcEnv, fnRetVal, scope) <- ask
   case block of
-    BStmt line (Block line2 b) ->
+    BStmt line (Block line2 b) -> do
       local (const (valEnv, funcEnv, fnRetVal, scope+1)) $ analyseBlockStmts b
     stmt ->
       local (const (valEnv, funcEnv, fnRetVal, scope+1)) $ analyseBlockStmts [stmt]

@@ -1,4 +1,15 @@
+
 int main() {
-    string s = "Xd" - "xd";
-    return 0;
+
+    int x=1;
+
+    if (1<2) {
+        printInt(x);
+        string x="Ala ma kota";
+        printString(x);
+    }
+
+    printString(x);
+
+    return 0;   
 }
