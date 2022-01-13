@@ -1,5 +1,4 @@
 module Backend.LLVM where
-import Latte.Abs (MulOp)
 
 data Val = VConst Integer
          | VReg Reg

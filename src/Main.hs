@@ -7,6 +7,7 @@ import           Latte.Par            (myLexer, pProgram)
 import           System.Environment   (getArgs)
 import           System.Exit          (exitFailure, exitSuccess)
 import           System.IO            (hPutStrLn, putStrLn, stderr)
+import Backend.Run
 
 
 printUsage :: IO ()
@@ -32,4 +33,11 @@ main = do
               exitFailure
             Right _ -> do
               hPutStrLn stderr "OK\n"
-              exitSuccess
+              (llvmCompilation, _) <- runCompilation tree
+              case llvmCompilation of 
+                Left llvmError -> do
+                  hPutStrLn stderr llvmError
+                  exitFailure
+                Right llvmCode -> do
+                  putStrLn llvmCode
+                  exitSuccess

@@ -8,7 +8,6 @@ import           Data.Maybe
 import           Latte.Abs
 
 -- enviroment --
-
 type Scope = Int
 type Loc = Int
 
@@ -33,11 +32,9 @@ frth4 :: (a, b, c, d) -> d
 frth4 (_, _, _, x) = x
 
 -- semantic analysis monad --
-
 type SAM a = ReaderT Env (ExceptT String (StateT Store IO)) a
 
 -- Latte variables --
-
 data Func = VFunc Type Ident [Arg] Block
 
 data Val
@@ -58,12 +55,10 @@ instance Show Val where
   show VVoid   = show "Void"
 
 -- RetInfo --
-
 data RetInfo = Return Val
              | ReturnNothing
 
 -- init enviroment --
-
 initStore :: Store
 initStore = Map.empty
 
@@ -71,7 +66,6 @@ initEnv :: Env
 initEnv = (Map.empty, Map.empty, VInt, 0)
 
 -- !debug --
-
 debug :: SAM ()
 debug = do
   (m1, m2, fnRetVal, scope) <- ask
