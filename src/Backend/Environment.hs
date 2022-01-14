@@ -24,6 +24,7 @@ type FnRetReg = Reg
 data Env = Env {eValEnv :: ValEnv, 
             eFuncEnv :: FuncEnv,
             eScope :: Scope }
+  deriving (Show)
 
 -- compiler state monad -- 
 type Store = Map.Map Loc Reg
@@ -35,6 +36,7 @@ data CompilerState = CompilerState { sStore :: Store,
                                      sFunctions :: Functions, 
                                      sCurrLabel :: CurrLabel, 
                                      sCurrReg :: CurrReg }
+  deriving (Show)
 
 -- RetInfo --
 data RetInfo = Return (LLVM.Type, Val)
@@ -57,4 +59,17 @@ initEnv = Env {
   eValEnv = Map.empty,
   eFuncEnv = Map.empty, 
   eScope = 0}
+
+-- ! debug functions
+
+debugEnv :: CM ()
+debugEnv = do
+  env <- ask
+  liftIO $ print env
+
+debugState :: CM ()
+debugState = do
+  state <- get
+  liftIO $ print state
+
 

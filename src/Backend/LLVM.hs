@@ -82,5 +82,9 @@ data Module = Module { globals :: [Constant],
                        functions :: [Fn]}
   deriving (Eq, Ord, Show)
 
+-- converters between llvm and latte types --
+-- todo
+
+-- print llvm code from in-memory structures -- 
 -- todo print llvm code of all data types
 

@@ -69,6 +69,8 @@ compileTopDefs = mapM compileTopDef
 compileTopDef :: TopDef -> CM ()
 compileTopDef (FnDef line t id args b) = do
   -- todo args declaration
+  let (Ident ident) = id
+  emitFunction Ti32 ident [] -- todo przekonwertowac typ i argumenty
   compileBlock (BStmt line b)
   return ()
 
