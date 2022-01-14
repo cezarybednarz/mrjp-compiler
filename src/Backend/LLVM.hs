@@ -42,7 +42,7 @@ data LLVMStmt = Call Type String [(Type, Val)] (Maybe Reg)
               | Sext Type Val Type Reg
   deriving (Eq, Ord, Show)
 
-data Block = Block { bLabel :: Label,
+data LLBlock = LLBlock { bLabel :: Label,
                      bStmts :: [LLVMStmt],
                      bExit :: LLVMStmt }
   deriving (Eq, Ord, Show)
@@ -69,7 +69,7 @@ data FnType = FnType Type [Type]
 data Fn = Fn { fType :: Type,
                fName :: String,
                fArgs :: [(Type, String)],
-               fBlocks :: [Block] }
+               fBlocks :: [LLBlock] }
   deriving (Eq, Ord, Show)
 
 data Constant = Constant Int String String
