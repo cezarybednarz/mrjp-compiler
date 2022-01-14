@@ -21,7 +21,9 @@ type FuncEnv = Map.Map Ident Loc
 type FnRetReg = Reg
 
 -- environment monad --
-type Env = (ValEnv, FuncEnv, FnRetReg, Scope)
+data Env = Env {eValEnv :: ValEnv, 
+            eFuncEnv :: FuncEnv,
+            eScope :: Scope }
 
 -- compiler state monad -- 
 type Store = Map.Map Loc Reg
@@ -38,19 +40,6 @@ data CompilerState = CompilerState { sStore :: Store,
 data RetInfo = Return (LLVM.Type, Val)
              | ReturnNothing
 
--- tuple selection for Env --
-fst4 :: (a, b, c, d) -> a
-fst4 (x, _, _, _) = x
-
-snd4 :: (a, b, c, d) -> b
-snd4 (_, x, _, _) = x
-
-thrd4 :: (a, b, c, d) -> c
-thrd4 (_, _, x, _) = x
-
-frth4 :: (a, b, c, d) -> d
-frth4 (_, _, _, x) = x
-
 -- compiler monad --
 type CM a = ReaderT Env (ExceptT String (StateT CompilerState IO)) a
 
@@ -64,5 +53,8 @@ initCompilerState = CompilerState {
 
 -- todo zmienic Reg 0 na cos odpowiedniego
 initEnv :: Env
-initEnv = (Map.empty, Map.empty, Reg 0, 0)
+initEnv = Env {
+  eValEnv = Map.empty,
+  eFuncEnv = Map.empty, 
+  eScope = 0}
 

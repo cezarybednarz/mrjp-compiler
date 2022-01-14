@@ -43,8 +43,17 @@ data LLVMStmt = Call Type String [(Type, Val)] (Maybe Reg)
   deriving (Eq, Ord, Show)
 
 data LLBlock = LLBlock { bLabel :: Label,
-                     bStmts :: [LLVMStmt],
-                     bExit :: LLVMStmt }
+                     bStmts :: [LLVMStmt]}
+                     -- todo bExit LLVMStmt ??
+  deriving (Eq, Ord, Show)
+
+data FnType = FnType Type [Type]
+  deriving (Eq, Ord, Show)
+              
+data Fn = Fn { fType :: Type,
+               fName :: String,
+               fArgs :: [(Type, String)],
+               fBlocks :: [LLBlock] }
   deriving (Eq, Ord, Show)
 
 data Cond = RelEQ 
@@ -60,16 +69,6 @@ data ArithmOp = Add
               | Mul
               | Div
               | Rem
-  deriving (Eq, Ord, Show)
-  
-
-data FnType = FnType Type [Type]
-  deriving (Eq, Ord, Show)
-              
-data Fn = Fn { fType :: Type,
-               fName :: String,
-               fArgs :: [(Type, String)],
-               fBlocks :: [LLBlock] }
   deriving (Eq, Ord, Show)
 
 data Constant = Constant Int String String

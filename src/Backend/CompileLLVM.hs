@@ -1,9 +1,9 @@
 {-# OPTIONS_GHC -Wno-deferred-out-of-scope-variables #-}
 module Backend.CompileLLVM where
 
-import Control.Monad.State ( MonadState(put, get) )
-import Control.Monad.Reader ( MonadReader(ask, local) )
-import Control.Monad.Except ()
+import Control.Monad.State 
+import Control.Monad.Reader
+import Control.Monad.Except
 
 import Backend.Environment
 import Backend.LLVM as LLVM
@@ -22,6 +22,33 @@ runMain (Program line tds) = do
 
 -- compiler state modifiers --
 
+-- add function to compiler state --
+emitFunction :: LLVM.Type -> String -> [(LLVM.Type, String)] -> CM ()
+emitFunction t name args = do
+  state <- get
+  let functions = sFunctions state
+  let function = Fn {
+    fType = t,
+    fName = name,
+    fArgs = args,
+    fBlocks = []
+  }
+  put $ state { sFunctions = function:functions}
+  return ()
+
+-- add empty block to current function -- 
+emitNewBlock :: Label -> CM ()
+emitNewBlock label = do
+  state <- get 
+  let f:functions = sFunctions state 
+  let blocks = fBlocks f
+  let block = LLBlock {
+    bLabel = label,
+    bStmts = []
+  }
+  let function = f { fBlocks = block:blocks }
+  put $ state { sFunctions = function:functions }
+  return ()
 
 -- emit instruction to current block in current function -- 
 emitStmt :: LLVMStmt -> CM ()
@@ -35,25 +62,26 @@ emitStmt llvmstmt = do
   put $ state { sFunctions = function:functions}
   return ()
 
--- compilation --
+-- compile topdefs --
 compileTopDefs :: [TopDef] -> CM [()]
 compileTopDefs = mapM compileTopDef
 
 compileTopDef :: TopDef -> CM ()
 compileTopDef (FnDef line t id args b) = do
   -- todo args declaration
+  compileBlock (BStmt line b)
   return ()
 
 
 -- compile statements --
 compileBlock :: Stmt -> CM (RetInfo, Env)
 compileBlock block = do
-  (valEnv, funcEnv, fnRetReg, scope) <- ask
+  env <- ask
   case block of
     BStmt line (Block line2 b) -> do
-      local (const (valEnv, funcEnv, fnRetReg, scope+1)) $ compileBlockStmts b
+      local (const (env { eScope = eScope env + 1})) $ compileBlockStmts b
     stmt ->
-      local (const (valEnv, funcEnv, fnRetReg, scope+1)) $ compileBlockStmts [stmt]
+      local (const (env { eScope = eScope env + 1})) $ compileBlockStmts [stmt]
 
 compileBlockStmts :: [Stmt] -> CM (RetInfo, Env)
 compileBlockStmts [] = do
