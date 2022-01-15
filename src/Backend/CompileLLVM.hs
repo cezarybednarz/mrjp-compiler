@@ -136,7 +136,7 @@ compileBlockStmts (s:ss) = do
     (ReturnNothing, env) -> do
       local (const env) $ compileBlockStmts ss
 
-compileDecl :: Latte.Abs.Type -> [Item] -> CM Env
+compileDecl :: Latte.Type -> [Item] -> CM Env
 compileDecl t [] = ask
 compileDecl t (x:xs) = do
   env <- declItem t x
