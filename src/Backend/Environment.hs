@@ -6,7 +6,7 @@ import Control.Monad.Except
 import Data.Maybe
 import Data.Map as Map
 import Backend.LLVM as LLVM
-import Latte.Abs
+import Latte.Abs as Latte
 
 -- currently used variables --
 newtype Regs = Regs (Map.Map String Reg) 
