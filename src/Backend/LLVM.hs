@@ -13,7 +13,7 @@ data Reg = Reg Integer
          | RArg String 
   deriving (Eq, Ord, Show)
 
-newtype Label = Label Int 
+newtype Label = Label Integer 
   deriving (Eq, Ord, Show)
 
 data Type = Ti64
@@ -24,22 +24,22 @@ data Type = Ti64
           | Ptr Type 
   deriving (Eq, Ord, Show)
 
-data LLVMStmt = Call Type String [(Type, Val)] (Maybe Reg)
+data LLVMStmt = Call (Maybe Reg) Type String [(Type, Val)] 
               | RetVoid
               | Ret Type Val
-              | Arithm Type Val Val ArithmOp Reg
+              | Arithm Reg Type Val Val ArithmOp
               | Br Label
               | BrCond Type Val Label Label
               | BlockLabel Label
-              | Load
+              | Load Reg Type Type Reg 
               | Store Type Val Type Reg
-              | Alloca Type Reg
-              | Cmp Cond Type Val Val Reg
+              | Alloca Reg Type 
+              | Cmp Reg Cond Type Val Val 
               -- todo phi 
               | Unreachable
-              | GetElementPtr Type Type Val Type Val Reg
-              | Bitcast Type Val Type Reg
-              | Sext Type Val Type Reg
+              | GetElementPtr Reg Type Type Val Type Val 
+              | Bitcast Reg Type Val Type 
+              | Sext Reg Type Val Type 
   deriving (Eq, Ord, Show)
 
 data LLBlock = LLBlock { bLabel :: Label,
