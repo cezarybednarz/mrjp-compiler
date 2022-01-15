@@ -28,7 +28,7 @@ data CompilerState = CompilerState { sFunctions :: Functions,
   deriving (Show)
 
 -- RetInfo --
-data RetInfo = Return (LLVM.Type, Val)
+data RetInfo = Return LLVM.Type
              | ReturnNothing
 
 -- compiler monad --

@@ -50,6 +50,20 @@ getRegister :: CM Reg
 getRegister = do
   gets sCurrReg
 
+getIdentReg :: Ident -> CM Reg
+getIdentReg id = do
+  env <- ask
+  let valEnv = eValEnv env
+  let Just (reg, _) = Map.lookup id valEnv
+  return reg
+
+getFnType :: CM LLVM.Type
+getFnType = do
+  state <- get 
+  let f:functions = sFunctions state
+  let t = fType f
+  return t
+
 -- emit instruction to current block in current function -- 
 emitStmt :: LLVMStmt -> CM ()
 emitStmt llvmstmt = do
@@ -66,7 +80,7 @@ emitStmt llvmstmt = do
 emitArgsDecl :: Reg -> [(LLVM.Type, String)] -> CM Env
 emitArgsDecl reg [] = ask
 emitArgsDecl reg ((t, strId):args) = do
-  env <- ask 
+  env <- ask
   reg2 <- newRegister
   emitStmt $ Alloca reg2 t
   emitStmt $ Store t (VReg reg) (Ptr t) reg2
@@ -77,8 +91,6 @@ emitArgsDecl reg ((t, strId):args) = do
 -- add function to compiler state --
 emitFunction :: LLVM.Type -> String -> [(LLVM.Type, String)] -> CM Env
 emitFunction t name args = do
-  setRegister $ Reg (toInteger $ length args + 1)
-  env <- emitArgsDecl (Reg 0) args
   state <- get
   let functions = sFunctions state
   let function = Fn {
@@ -88,7 +100,10 @@ emitFunction t name args = do
     fBlocks = []
   }
   put $ state { sFunctions = function:functions}
-  return env
+  label <- newLabel
+  emitNewBlock label
+  setRegister $ Reg (toInteger $ length args + 1)
+  emitArgsDecl (Reg 0) args
 
 -- add empty block to current function -- 
 emitNewBlock :: Label -> CM ()
@@ -127,6 +142,7 @@ emitDeclItem t (NoInit line id) = do
       emitStmt $ Store Ti32 (VConst 0) (Ptr Ti32) reg
     Bool _ -> do
       emitStmt $ Store Ti1 (VConst 0) (Ptr Ti1) reg
+    -- todo moze sie zbuguje przy stringu
   newValEnv <- declareVarInEnv id reg
   return $ env { eValEnv = newValEnv }
 emitDeclItem t (Init line id e) = do
@@ -134,7 +150,8 @@ emitDeclItem t (Init line id e) = do
   llvmtype <- convTypeLLVMType t
   reg <- newRegister
   emitStmt $ Alloca reg llvmtype
-  -- todo dopisac ewaluacje expression
+  exprReg <- compileExpr e
+  emitStmt $ Store llvmtype (VReg exprReg) (Ptr llvmtype) reg
   return env
 
 -- convert between latte and llvm types --
@@ -172,6 +189,17 @@ compileTopDef (FnDef line t id args b) = do
   local (const env) $ compileBlock (BStmt line b)
   return ()
 
+-- compile exprs -- 
+compileExpr :: Expr -> CM Reg
+compileExpr (EVar _ id) = getIdentReg id
+compileExpr (ELitInt _ i) = do
+  reg <- newRegister
+  emitStmt $ Alloca reg Ti32
+  emitStmt $ Store Ti32 (VConst i) (Ptr Ti32) reg
+  return reg
+
+-- todo reszta compileExpr
+
 -- compile stmts helpers --
 compileBlock :: Stmt -> CM (RetInfo, Env)
 compileBlock block = do
@@ -189,10 +217,7 @@ compileBlockStmts [] = do
 compileBlockStmts (s:ss) = do
   ret <- compileStmt s
   case ret of
-    (Return val, _) -> do
-      case val of
-        (Tvoid, _) -> emitStmt RetVoid
-        (t, v) -> emitStmt $ LLVM.Ret t v
+    (Return _, _) -> do
       return ret
     (ReturnNothing, env) -> do
       local (const env) $ compileBlockStmts ss
@@ -214,4 +239,17 @@ compileStmt (Decl line t items) = do
   env <- compileDecl t items
   return (ReturnNothing, env)
 
--- todo compileStmt wszystkiego
+-- todo reszta compileStmt 
+
+compileStmt (Latte.Ret _ expr) = do
+  reg <- compileExpr expr
+  env <- ask
+  t <- getFnType
+  emitStmt $ LLVM.Ret t (VReg reg)
+  return (Return t, env)
+compileStmt (VRet _) = do
+  env <- ask
+  emitStmt RetVoid
+  return (Return Tvoid, env)
+
+-- todo reszta compileStmt
