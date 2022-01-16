@@ -94,7 +94,7 @@ instance Show Type where
   show Tvoid = "void"
   show Ti1 = "i1"
   show Ti8 = "i8"
-  show (Ptr t) = "*" ++ show t
+  show (Ptr t) = show t ++ "*"
 
 instance Show LLVMStmt where
   --show (Call (Maybe Reg) Type String [(Type, Val)]) =
@@ -104,7 +104,7 @@ instance Show LLVMStmt where
   -- show (Br Label) = 
   -- show (BrCond Type Val Label Label) = 
   -- show (Load Reg Type Type Reg) = 
-  show (Store t1 v1 t2 r) = "store " ++ show t1 ++ " " ++ show v1 ++ " " ++ show t2 ++ " " ++ show r
+  show (Store t1 v1 t2 r) = "store " ++ show t1 ++ " " ++ show v1 ++ ", " ++ show t2 ++ " " ++ show r
   show (Alloca reg t) = show reg ++ " = alloca " ++ show t
   -- show (Cmp Reg Cond Type Val Val) = 
   -- show (Unreachable) = 
