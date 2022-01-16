@@ -80,6 +80,13 @@ getFnArgsTypes name = do
   let Just (_, args) = Map.lookup name functionTypes
   return args
 
+getScope :: Ident -> CM Scope
+getScope id = do
+  env <- ask
+  let valEnv = eValEnv env
+  let Just (_, _, scope) = Map.lookup id valEnv
+  return scope
+
 -- emit instruction to current block in current function -- 
 emitStmt :: LLVMStmt -> CM ()
 emitStmt llvmstmt = do
@@ -267,22 +274,34 @@ compileExpr (Neg _ expr) = do
   e <- compileExpr expr
   reg <- newRegister
   emitStmt $ Arithm reg Ti32 (VConst 0) e Sub
-  -- todo moze load
   return (VReg reg)
 compileExpr (Not _ expr) = do
   e <- compileExpr expr
   reg <- newRegister
   emitStmt $ Xor reg Ti1 e VTrue
-  -- todo moze load
   return (VReg reg)
-compileExpr (EMul _ expr1 _ expr2) = return VNull -- todo
-compileExpr (EAdd _ expr1 _ expr2) = do
+compileExpr (EMul _ expr1 op expr2) = do
+  e1 <- compileExpr expr1
+  e2 <- compileExpr expr2
+  reg <- newRegister
+  case op of 
+    (Times _) -> emitStmt $ Arithm reg Ti32 e1 e2 Mul
+    (Latte.Div _) -> emitStmt $ Arithm reg Ti32 e1 e2 LLVM.Div
+    (Mod _) -> emitStmt $ Arithm reg Ti32 e1 e2 Rem
+  return (VReg reg)
+compileExpr (EAdd _ expr1 op expr2) = do
   e1 <- compileExpr expr1
   e2 <- compileExpr expr2
   -- todo dodawanie stringow (case na typ Val e1, czy ptr czy nie)
   reg <- newRegister
-  emitStmt $ Arithm reg Ti32 e1 e2 Add
+  case op of 
+    (Plus _) -> emitStmt $ Arithm reg Ti32 e1 e2 Add
+    (Minus _) -> emitStmt $ Arithm reg Ti32 e1 e2 Sub
   return (VReg reg)
+compileExpr (EAnd _ expr1 expr2) = return VNull -- todo
+compileExpr (EOr _ expr1 epxr2) = return VNull -- todo
+compileExpr (ERel _ expr1 op expr2) = return VNull -- todo
+
 
 -- todo reszta compileExpr
 
@@ -329,9 +348,12 @@ compileStmt (BStmt line (Block line2 b)) =
 compileStmt (Decl line t items) = do
   env <- compileDecl t items
   return (ReturnNothing, env)
-
--- todo reszta compileStmt 
-
+compileStmt (Ass _ id expr) = do
+  env <- ask
+  e <- compileExpr expr
+  (t, r) <- getIdentTypeReg id
+  emitStmt $ Store t e (Ptr t) r
+  return (ReturnNothing, env)
 compileStmt (Latte.Ret _ expr) = do
   val <- compileExpr expr
   env <- ask
@@ -345,6 +367,7 @@ compileStmt (SExp _ expr) = do
   env <- ask
   compileExpr expr
   return (ReturnNothing, env)
+
 
 compileStmt stmt =
   throwError $ show stmt

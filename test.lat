@@ -1,11 +1,18 @@
 
-int add(int a, int b) {
-  return a + b;
+int sub(int a, int b) {
+  return a - b + (a - a) + (b - b) + a + (-a);
+}
+
+void p(int a, int b, boolean c) {
+  printInt(a + b);
 }
 
 int main() {
   int x = 4;
   int y = 3;
-  printInt(add(x, y));
+  x = y + (-y) + x;
+  x = (x * x) / x;
+  p(x - y, x - x, true);
+  printInt(sub(x, y) + (1000 % 10));
   return 0;
 }

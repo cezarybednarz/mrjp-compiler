@@ -1,6 +1,5 @@
 #!/bin/bash
 # lli out.bc
-# ./dist-newstyle/compiler "$1" 
 
 DIRNAME=`dirname $1`
 BASENAME=`basename $1 .lat`
