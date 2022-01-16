@@ -105,7 +105,7 @@ instance Show LLVMStmt where
   -- show (BrCond Type Val Label Label) = 
   -- show (Load Reg Type Type Reg) = 
   show (Store t1 v1 t2 r) = "store " ++ show t1 ++ " " ++ show v1 ++ " " ++ show t2 ++ " " ++ show r
-  show (Alloca reg t) = show reg ++ " alloca " ++ show t
+  show (Alloca reg t) = show reg ++ " = alloca " ++ show t
   -- show (Cmp Reg Cond Type Val Val) = 
   -- show (Unreachable) = 
   -- show (GetElementPtr Reg Type Type Val Type Val) = 
@@ -127,7 +127,7 @@ printLLBlocks first (block:blocks) = do
   let stmts = bStmts block
   let blockStmts = map printStmt (reverse stmts)
   let nextBlockStmts = printLLBlocks False blocks
-  if first then
+  if not first then
     show (bLabel block) : blockStmts ++ nextBlockStmts
   else
     blockStmts ++ nextBlockStmts
@@ -137,9 +137,9 @@ printArgs _ _ [] = []
 printArgs first register ((t, _):args) =
   (if first then "" else ", ")
   ++
-  (show t) ++ " " 
+  show t ++ " " 
   ++
-  (show (Reg register))
+  show (Reg register)
   ++
   printArgs False (register + 1) args
  
