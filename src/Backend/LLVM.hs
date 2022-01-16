@@ -25,9 +25,10 @@ data Type = Ti64
   deriving (Eq, Ord)
 
 
-data LLVMStmt = Call (Maybe Reg) Type String [(Type, Val)]
-              | RetVoid
+data LLVMStmt = Call Reg Type String [(Type, Val)]
+              | CallVoid Type String [(Type, Val)]
               | Ret Type Val
+              | RetVoid
               | Arithm Reg Type Val Val ArithmOp
               | Br Label
               | BrCond Type Val Label Label
@@ -35,6 +36,7 @@ data LLVMStmt = Call (Maybe Reg) Type String [(Type, Val)]
               | Store Type Val Type Reg
               | Alloca Reg Type
               | Cmp Reg Cond Type Val Val
+              | Xor Reg Type Val Val
               -- todo phi 
               | Unreachable
               | GetElementPtr Reg Type Type Val Type Val
@@ -66,12 +68,19 @@ data ArithmOp = Add
               | Mul
               | Div
               | Rem
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord)
 
 data StrConstant = StrConstant Int String String
   deriving (Eq, Ord, Show)
 
 -- show for llvm types --
+instance Show ArithmOp where
+  show Add = "add"
+  show Sub = "sub"
+  show Mul = "mul"
+  show Div = "sdiv"
+  show Rem = "srem"
+
 instance Show Reg where
   show (Reg i) = "%" ++ show i 
   -- show (RArg String) = 
@@ -80,8 +89,8 @@ instance Show Val where
   show (VConst i) = show i
   show (VReg reg) = show reg
   -- show (VGetElementPtr Int String) =
-  -- show VTrue = 
-  -- show VFalse = 
+  show VTrue = "true"
+  show VFalse = "false"
   -- show VUndef = 
   -- show VNull = 
 
@@ -97,10 +106,14 @@ instance Show Type where
   show (Ptr t) = show t ++ "*"
 
 instance Show LLVMStmt where
-  --show (Call (Maybe Reg) Type String [(Type, Val)]) =
+  show (Call reg t name args) = show reg ++ " = call " ++ show t ++ " @"
+    ++ name ++ "(" ++ printArgsWithVals True args ++ ")"
+  show (CallVoid t name args) = "call " ++ show t ++ " @"
+    ++ name ++ "(" ++ printArgsWithVals True args ++ ")"
   show RetVoid = "ret void"
   show (Ret t val) = "ret " ++ show t ++ " " ++ show val
-  -- show (Arithm Reg Type Val Val ArithmOp) = 
+  show (Arithm reg t v1 v2 op) = show reg ++ " = " ++ show op ++ " " 
+    ++ show t ++ " " ++ show v1 ++ ", " ++ show v2
   -- show (Br Label) = 
   -- show (BrCond Type Val Label Label) = 
   show (Load r1 t1 t2 r2) = show r1 ++ " = load " ++ show t1 ++ ", " 
@@ -108,6 +121,8 @@ instance Show LLVMStmt where
   show (Store t1 v1 t2 r) = "store " ++ show t1 ++ " " ++ show v1 ++ ", "
     ++ show t2 ++ " " ++ show r
   show (Alloca reg t) = show reg ++ " = alloca " ++ show t
+  show (Xor reg t v1 v2) = show reg ++ " = xor " ++ show t ++ " "
+    ++ show v1 ++ ", " ++ show v2
   -- show (Cmp Reg Cond Type Val Val) = 
   -- show (Unreachable) = 
   -- show (GetElementPtr Reg Type Type Val Type Val) = 
@@ -115,6 +130,17 @@ instance Show LLVMStmt where
   -- show (Sext Reg Type Val Type) = 
    
 -- print llvm code from in-memory structures -- 
+
+printArgsWithVals :: Bool -> [(Type, Val)] -> String
+printArgsWithVals _ [] = []
+printArgsWithVals first ((t, val):args) =
+  (if first then "" else ", ")
+  ++
+  show t ++ " " 
+  ++
+  show val
+  ++
+  printArgsWithVals False args
 
 printStmt :: LLVMStmt -> String
 printStmt stmt = "  " ++ show stmt

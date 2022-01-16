@@ -26,6 +26,7 @@ library
       Backend.Environment
       Backend.LLVM
       Backend.Run
+      Common.Runtime
       Frontend.Analyse
       Frontend.Environment
       Frontend.Exception
@@ -55,6 +56,7 @@ executable compiler
       Backend.Environment
       Backend.LLVM
       Backend.Run
+      Common.Runtime
       Frontend.Analyse
       Frontend.Environment
       Frontend.Exception

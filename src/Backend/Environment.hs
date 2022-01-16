@@ -22,11 +22,13 @@ data Env = Env {eValEnv :: ValEnv,
 -- compiler state monad -- 
 type Functions = [Fn] 
 type StrConstants = Map.Map Int StrConstant
+type FunctionTypes = Map.Map String (LLVM.Type, [LLVM.Type])
 
 data CompilerState = CompilerState { sStrConstants :: StrConstants,
                                      sFunctions :: Functions, 
                                      sCurrLabel :: Label, 
-                                     sCurrReg :: Reg }
+                                     sCurrReg :: Reg ,
+                                     sFunctionTypes :: FunctionTypes}
   deriving (Show)
 
 -- RetInfo --
@@ -43,14 +45,16 @@ initCompilerState = CompilerState {
   sStrConstants = Map.empty,
   sFunctions = [],
   sCurrLabel = Label 0,
-  sCurrReg = Reg 0 }
+  sCurrReg = Reg 0 ,
+  sFunctionTypes = Map.empty
+  }
 
 -- todo zmienic Reg 0 na cos odpowiedniego
 initEnv :: Env
 initEnv = Env {
   eValEnv = Map.empty,
   eScope = 0}
-
+    
 -- ! debug functions
 
 debugEnv :: CM ()
@@ -62,5 +66,9 @@ debugState :: CM ()
 debugState = do
   state <- get
   liftIO $ print state
+
+debugString :: String -> CM ()
+debugString str = do
+  liftIO $ print str
 
 

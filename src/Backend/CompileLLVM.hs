@@ -8,11 +8,13 @@ import           Data.Map             as Map
 import Backend.Environment
 import Backend.LLVM as LLVM
 import Latte.Abs as Latte
-
+import Common.Runtime
 
 -- function for starting compilation --
 runMain :: Program -> CM String
 runMain (Program line tds) = do
+  addFnTypesToState (tds ++ libraryFunctions line)
+  state <- get
   env <- compileTopDefs tds
   state <- get
   let strConstants = [] -- todo przeparsować values mapy
@@ -57,12 +59,26 @@ getIdentReg id = do
   let Just (reg, _) = Map.lookup id valEnv
   return reg
 
-getFnType :: CM LLVM.Type
-getFnType = do
+getCurrFnType :: CM LLVM.Type
+getCurrFnType = do
   state <- get
   let f:functions = sFunctions state
   let t = fType f
   return t
+
+getFnType :: String -> CM LLVM.Type
+getFnType name = do
+  state <- get
+  let functionTypes = sFunctionTypes state
+  let Just (t, _) = Map.lookup name functionTypes
+  return t
+
+getFnArgsTypes :: String -> CM [LLVM.Type]
+getFnArgsTypes name = do
+  state <- get
+  let functionTypes = sFunctionTypes state
+  let Just (_, args) = Map.lookup name functionTypes
+  return args
 
 -- emit instruction to current block in current function -- 
 emitStmt :: LLVMStmt -> CM ()
@@ -106,7 +122,9 @@ emitFunction t name args = do
     fArgs = args,
     fBlocks = []
   }
-  put $ state { sFunctions = function:functions}
+  put $ state {
+    sFunctions = function:functions
+  }
   label <- newLabel
   emitNewBlock label
   setRegister $ Reg (toInteger $ length args + 1)
@@ -158,7 +176,8 @@ emitDeclItem t (Init line id e) = do
   emitStmt $ Alloca reg llvmtype
   exprVal <- compileExpr e
   emitStmt $ Store llvmtype exprVal (Ptr llvmtype) reg
-  return env
+  newValEnv <- declareVarInEnv id reg
+  return $ env { eValEnv = newValEnv }
 
 -- convert between latte and llvm types --
 convIdentString :: Ident -> CM String
@@ -182,6 +201,20 @@ convArgTofArg (Arg _ t id) = do
   llvmtype <- convTypeLLVMType t
   return (llvmtype, ident)
 
+-- add function types to compiler state --
+addFnTypesToState :: [TopDef] -> CM ()
+addFnTypesToState [] = return ()
+addFnTypesToState ((FnDef line t id args b):fns) = do
+  fArgs <- mapM convArgTofArg args
+  llvmtype <- convTypeLLVMType t
+  let (Ident name) = id
+  state <- get
+  let functionTypes = sFunctionTypes state
+  put $ state { 
+    sFunctionTypes = Map.insert name (llvmtype, Prelude.map fst fArgs) functionTypes 
+  }
+  addFnTypesToState fns
+
 -- compile topdefs --
 compileTopDefs :: [TopDef] -> CM [()]
 compileTopDefs = mapM compileTopDef
@@ -193,8 +226,16 @@ compileTopDef (FnDef line t id args b) = do
   llvmtype <- convTypeLLVMType t
   env <- emitFunction llvmtype ident fArgs
   (retInfo, _) <- local (const env) $ compileBlock (BStmt line b)
-  fnType <- getFnType
+  fnType <- getCurrFnType
   when (fnType == Tvoid && retInfo == ReturnNothing) $ emitStmt RetVoid
+
+-- compile list of expressions to val --
+compileExprList :: [Expr] -> CM [Val]
+compileExprList [] = return []
+compileExprList (expr:exprs) = do
+  v <- compileExpr expr
+  valList <- compileExprList exprs
+  return $ v : valList
 
 -- compile exprs -- 
 compileExpr :: Expr -> CM Val
@@ -205,8 +246,42 @@ compileExpr (ELitInt _ i) = do
   return $ VConst i
 compileExpr (ELitTrue _) = return VTrue
 compileExpr (ELitFalse _) = return VFalse
---compileExpr (EApp _ id exprs) = do
-
+compileExpr (EApp _ id exprs) = do
+  let (Ident ident) = id
+  t <- getFnType ident
+  types <- getFnArgsTypes ident
+  vals <- compileExprList exprs
+  let llArgs = [(x,y) | x <- types, y <- vals]
+  case t of
+    Tvoid -> do
+      emitStmt $ CallVoid t ident llArgs
+      return VNull
+    _ -> do
+      reg <- newRegister
+      emitStmt $ Call reg t ident llArgs
+      reg2 <- emitLoad t reg
+      return $ VReg reg2
+compileExpr (EString _ s) = return VNull -- todo
+compileExpr (Neg _ expr) = do
+  e <- compileExpr expr
+  reg <- newRegister
+  emitStmt $ Arithm reg Ti32 (VConst 0) e Sub
+  -- todo moze load
+  return (VReg reg)
+compileExpr (Not _ expr) = do
+  e <- compileExpr expr
+  reg <- newRegister
+  emitStmt $ Xor reg Ti1 e VTrue
+  -- todo moze load
+  return (VReg reg)
+compileExpr (EMul _ expr1 _ expr2) = return VNull -- todo
+compileExpr (EAdd _ expr1 _ expr2) = do
+  e1 <- compileExpr expr1
+  e2 <- compileExpr expr2
+  -- todo dodawanie stringow (case na typ Val e1, czy ptr czy nie)
+  reg <- newRegister
+  emitStmt $ Arithm reg Ti32 e1 e2 Add
+  return (VReg reg)
 
 -- todo reszta compileExpr
 
@@ -259,11 +334,18 @@ compileStmt (Decl line t items) = do
 compileStmt (Latte.Ret _ expr) = do
   val <- compileExpr expr
   env <- ask
-  t <- getFnType
+  t <- getCurrFnType
   return (Return (t, val), env)
-compileStmt (VRet _) = do 
+compileStmt (VRet _) = do
   env <- ask
   emitStmt RetVoid
   return (Return (Tvoid, VNull), env)
+compileStmt (SExp _ expr) = do
+  env <- ask
+  compileExpr expr
+  return (ReturnNothing, env)
+
+compileStmt stmt =
+  throwError $ show stmt
 
 -- todo reszta compileStmt

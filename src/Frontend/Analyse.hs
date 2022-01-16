@@ -8,6 +8,7 @@ import           Data.Maybe
 import           Frontend.Environment
 import           Frontend.Exception
 import           Latte.Abs
+import Common.Runtime
 
 -- run analysis from main --
 
@@ -97,16 +98,6 @@ getIdentVal :: BNFC'Position -> Ident -> SAM Val
 getIdentVal line id = do
   loc <- getIdentLoc line id
   getLocVal line loc
-
--- declare library functions --
-
-libraryFunctions :: BNFC'Position -> [TopDef]
-libraryFunctions l =
-  [ FnDef l (Void l) (Ident "printInt") [Arg l (Int l) (Ident "n")] (Block l []),
-    FnDef l (Void l) (Ident "printString") [Arg l (Str l) (Ident "s")] (Block l []),
-    FnDef l (Void l) (Ident "error") [] (Block l []),
-    FnDef l (Int l) (Ident "readInt") [] (Block l [Ret l (ELitInt l 0)]),
-    FnDef l (Str l) (Ident "readString") [] (Block l [Ret l (EString l "")])]
 
 -- TopDef --
 
