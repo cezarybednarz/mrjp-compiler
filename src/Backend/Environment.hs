@@ -49,7 +49,6 @@ initCompilerState = CompilerState {
   sFunctionTypes = Map.empty
   }
 
--- todo zmienic Reg 0 na cos odpowiedniego
 initEnv :: Env
 initEnv = Env {
   eValEnv = Map.empty,

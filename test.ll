@@ -65,18 +65,30 @@ define i32 @main() {
   %13 = sdiv i32 %11, %12
   store i32 %13, i32* %1
   %14 = load i32, i32* %1
-  %15 = load i32, i32* %2
-  %16 = sub i32 %14, %15
-  %17 = load i32, i32* %1
-  %18 = load i32, i32* %1
-  %19 = sub i32 %17, %18
-  call void @p(i32 %16, i32 %19, i1 true)
-  %20 = load i32, i32* %1
-  %21 = load i32, i32* %2
-  %22 = call i32 @sub(i32 %20, i32 %21)
-  %23 = srem i32 1000, 10
-  %24 = add i32 %22, %23
-  call void @printInt(i32 %24)
+  %15 = add i32 %14, 1
+  store i32 %15, i32* %1
+  %16 = load i32, i32* %1
+  %17 = sub i32 %16, 1
+  store i32 %17, i32* %1
+  %18 = load i32, i32* %2
+  %19 = add i32 %18, 1
+  store i32 %19, i32* %2
+  %20 = load i32, i32* %2
+  %21 = sub i32 %20, 1
+  store i32 %21, i32* %2
+  %22 = load i32, i32* %1
+  %23 = load i32, i32* %2
+  %24 = sub i32 %22, %23
+  %25 = load i32, i32* %1
+  %26 = load i32, i32* %1
+  %27 = sub i32 %25, %26
+  call void @p(i32 %24, i32 %27, i1 true)
+  %28 = load i32, i32* %1
+  %29 = load i32, i32* %2
+  %30 = call i32 @sub(i32 %28, i32 %29)
+  %31 = srem i32 1000, 10
+  %32 = add i32 %30, %31
+  call void @printInt(i32 %32)
   ret i32 0
 }
 

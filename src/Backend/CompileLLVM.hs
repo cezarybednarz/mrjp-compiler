@@ -354,6 +354,18 @@ compileStmt (Ass _ id expr) = do
   (t, r) <- getIdentTypeReg id
   emitStmt $ Store t e (Ptr t) r
   return (ReturnNothing, env)
+compileStmt (Incr l id) = do
+  env <- ask
+  (_, r) <- getIdentTypeReg id
+  reg <- compileExpr (EAdd l (EVar l id) (Plus l) (ELitInt l 1))
+  emitStmt $ Store Ti32 reg (Ptr Ti32) r
+  return (ReturnNothing, env)
+compileStmt (Decr l id) = do
+  env <- ask
+  (_, r) <- getIdentTypeReg id
+  reg <- compileExpr (EAdd l (EVar l id) (Minus l) (ELitInt l 1))
+  emitStmt $ Store Ti32 reg (Ptr Ti32) r
+  return (ReturnNothing, env)
 compileStmt (Latte.Ret _ expr) = do
   val <- compileExpr expr
   env <- ask
