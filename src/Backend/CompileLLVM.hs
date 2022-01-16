@@ -52,12 +52,12 @@ getRegister :: CM Reg
 getRegister = do
   gets sCurrReg
 
-getIdentReg :: Ident -> CM Reg
-getIdentReg id = do
+getIdentTypeReg :: Ident -> CM (LLVM.Type, Reg)
+getIdentTypeReg id = do
   env <- ask
   let valEnv = eValEnv env
-  let Just (reg, _) = Map.lookup id valEnv
-  return reg
+  let Just (t, reg, _) = Map.lookup id valEnv
+  return (t, reg)
 
 getCurrFnType :: CM LLVM.Type
 getCurrFnType = do
@@ -107,7 +107,7 @@ emitArgsDecl reg ((t, strId):args) = do
   reg2 <- newRegister
   emitStmt $ Alloca reg2 t
   emitStmt $ Store t (VReg reg) (Ptr t) reg2
-  newValEnv <- declareVarInEnv (Ident strId) reg
+  newValEnv <- declareVarInEnv t (Ident strId) reg2
   let (Reg r) = reg
   local (const (env {eValEnv = newValEnv})) $ emitArgsDecl (Reg (r + 1)) args
 
@@ -145,12 +145,12 @@ emitNewBlock label = do
   return ()
 
 -- allocating and inserting registers to env and store without emmiting --
-declareVarInEnv :: Ident -> Reg -> CM ValEnv
-declareVarInEnv id reg = do
+declareVarInEnv :: LLVM.Type -> Ident -> Reg -> CM ValEnv
+declareVarInEnv t id reg = do
   env <- ask
   let valEnv = eValEnv env
   let scope = eScope env
-  let newValEnv = Map.insert id (reg, scope) valEnv
+  let newValEnv = Map.insert id (t, reg, scope) valEnv
   return newValEnv
 
 
@@ -167,7 +167,7 @@ emitDeclItem t (NoInit line id) = do
     Bool _ -> do
       emitStmt $ Store Ti1 (VConst 0) (Ptr Ti1) reg
     -- todo moze sie zbuguje przy stringu
-  newValEnv <- declareVarInEnv id reg
+  newValEnv <- declareVarInEnv llvmtype id reg
   return $ env { eValEnv = newValEnv }
 emitDeclItem t (Init line id e) = do
   env <- ask
@@ -176,7 +176,7 @@ emitDeclItem t (Init line id e) = do
   emitStmt $ Alloca reg llvmtype
   exprVal <- compileExpr e
   emitStmt $ Store llvmtype exprVal (Ptr llvmtype) reg
-  newValEnv <- declareVarInEnv id reg
+  newValEnv <- declareVarInEnv llvmtype id reg
   return $ env { eValEnv = newValEnv }
 
 -- convert between latte and llvm types --
@@ -238,10 +238,12 @@ compileExprList (expr:exprs) = do
   return $ v : valList
 
 -- compile exprs -- 
-compileExpr :: Expr -> CM Val
+-- always returns value or register which isn't a pointer --
+compileExpr :: Expr -> CM Val 
 compileExpr (EVar _ id) = do
-  reg <- getIdentReg id
-  return $ VReg reg
+  (t, reg) <- getIdentTypeReg id
+  reg2 <- emitLoad t reg
+  return $ VReg reg2
 compileExpr (ELitInt _ i) = do
   return $ VConst i
 compileExpr (ELitTrue _) = return VTrue
@@ -251,7 +253,7 @@ compileExpr (EApp _ id exprs) = do
   t <- getFnType ident
   types <- getFnArgsTypes ident
   vals <- compileExprList exprs
-  let llArgs = [(x,y) | x <- types, y <- vals]
+  let llArgs = zip types vals
   case t of
     Tvoid -> do
       emitStmt $ CallVoid t ident llArgs
@@ -259,8 +261,7 @@ compileExpr (EApp _ id exprs) = do
     _ -> do
       reg <- newRegister
       emitStmt $ Call reg t ident llArgs
-      reg2 <- emitLoad t reg
-      return $ VReg reg2
+      return $ VReg reg
 compileExpr (EString _ s) = return VNull -- todo
 compileExpr (Neg _ expr) = do
   e <- compileExpr expr

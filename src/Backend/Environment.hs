@@ -11,7 +11,7 @@ import Latte.Abs as Latte
 -- environment --
 type Scope = Int
 
-type ValEnv = Map.Map Ident (Reg, Scope)
+type ValEnv = Map.Map Ident (LLVM.Type, Reg, Scope)
 type FnRetReg = Reg
 
 -- environment monad --
