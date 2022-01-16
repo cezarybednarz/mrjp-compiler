@@ -16,8 +16,9 @@ runMain :: Program -> CM String
 runMain (Program line tds) = do
   env <- compileTopDefs tds
   state <- get
+  let strConstants = [] -- todo przeparsować values mapy
   let functions = sFunctions state
-  return $ show functions -- todo przeparsowac llvm
+  return $ unlines $ printLLVMProgram strConstants functions
 
 -- compiler state modifiers --
 
@@ -247,7 +248,7 @@ compileStmt (Latte.Ret _ expr) = do
   t <- getFnType
   emitStmt $ LLVM.Ret t (VReg reg)
   return (Return t, env)
-compileStmt (VRet _) = do
+compileStmt (VRet _) = do -- todo nie wypisuje sie w void funkcjach bez returna
   env <- ask
   emitStmt RetVoid
   return (Return Tvoid, env)
