@@ -7,5 +7,5 @@ BASENAME=`basename $1 .lat`
 LLVM="$DIRNAME/${BASENAME}.ll"
 LLVMBC="$DIRNAME/${BASENAME}.bc"
 ./dist-newstyle/compiler "$1" > $LLVM
-llvm-as $LLVM
-llvm-link -o $LLVMBC lib/runtime.bc
+llvm-as $LLVM -o $LLVMBC
+llvm-link -o $LLVMBC $LLVMBC lib/runtime.bc
