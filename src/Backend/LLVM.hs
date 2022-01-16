@@ -103,8 +103,10 @@ instance Show LLVMStmt where
   -- show (Arithm Reg Type Val Val ArithmOp) = 
   -- show (Br Label) = 
   -- show (BrCond Type Val Label Label) = 
-  -- show (Load Reg Type Type Reg) = 
-  show (Store t1 v1 t2 r) = "store " ++ show t1 ++ " " ++ show v1 ++ ", " ++ show t2 ++ " " ++ show r
+  show (Load r1 t1 t2 r2) = show r1 ++ " = load " ++ show t1 ++ ", " 
+    ++ show t2 ++ " " ++ show r2
+  show (Store t1 v1 t2 r) = "store " ++ show t1 ++ " " ++ show v1 ++ ", "
+    ++ show t2 ++ " " ++ show r
   show (Alloca reg t) = show reg ++ " = alloca " ++ show t
   -- show (Cmp Reg Cond Type Val Val) = 
   -- show (Unreachable) = 

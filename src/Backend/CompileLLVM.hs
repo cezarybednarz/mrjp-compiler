@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-deferred-out-of-scope-variables #-}
 module Backend.CompileLLVM where
 
 import Control.Monad.State
@@ -60,7 +59,7 @@ getIdentReg id = do
 
 getFnType :: CM LLVM.Type
 getFnType = do
-  state <- get 
+  state <- get
   let f:functions = sFunctions state
   let t = fType f
   return t
@@ -76,6 +75,13 @@ emitStmt llvmstmt = do
   let function = f { fBlocks = block:blocks }
   put $ state { sFunctions = function:functions }
   return ()
+
+-- emit load in order to read value from allocated register --
+emitLoad :: LLVM.Type -> Reg -> CM Reg
+emitLoad t reg = do
+  reg2 <- newRegister
+  emitStmt $ Load reg2 t (Ptr t) reg
+  return reg2
 
 -- emit arguments declaration -- 
 emitArgsDecl :: Reg -> [(LLVM.Type, String)] -> CM Env
@@ -121,7 +127,6 @@ emitNewBlock label = do
   return ()
 
 -- allocating and inserting registers to env and store without emmiting --
-
 declareVarInEnv :: Ident -> Reg -> CM ValEnv
 declareVarInEnv id reg = do
   env <- ask
@@ -187,8 +192,10 @@ compileTopDef (FnDef line t id args b) = do
   ident <- convIdentString id
   llvmtype <- convTypeLLVMType t
   env <- emitFunction llvmtype ident fArgs
-  local (const env) $ compileBlock (BStmt line b)
-  return ()
+  (retInfo, _) <- local (const env) $ compileBlock (BStmt line b)
+  -- todo add ret void if no ret void 
+  fnType <- getFnType
+  when (fnType == Tvoid && retInfo == ReturnNothing) $ emitStmt RetVoid
 
 -- compile exprs -- 
 compileExpr :: Expr -> CM Reg
@@ -197,7 +204,7 @@ compileExpr (ELitInt _ i) = do
   reg <- newRegister
   emitStmt $ Alloca reg Ti32
   emitStmt $ Store Ti32 (VConst i) (Ptr Ti32) reg
-  return reg
+  emitLoad Ti32 reg
 
 -- todo reszta compileExpr
 
@@ -218,7 +225,12 @@ compileBlockStmts [] = do
 compileBlockStmts (s:ss) = do
   ret <- compileStmt s
   case ret of
-    (Return _, _) -> do
+    (Return (t, reg), _) -> do
+      case t of
+        LLVM.Tvoid -> do
+          emitStmt LLVM.RetVoid
+        _ ->
+          emitStmt $ LLVM.Ret t (VReg reg)
       return ret
     (ReturnNothing, env) -> do
       local (const env) $ compileBlockStmts ss
@@ -246,11 +258,10 @@ compileStmt (Latte.Ret _ expr) = do
   reg <- compileExpr expr
   env <- ask
   t <- getFnType
-  emitStmt $ LLVM.Ret t (VReg reg)
-  return (Return t, env)
+  return (Return (t, reg), env)
 compileStmt (VRet _) = do -- todo nie wypisuje sie w void funkcjach bez returna
   env <- ask
   emitStmt RetVoid
-  return (Return Tvoid, env)
+  return (Return (Tvoid, Reg 0), env)
 
 -- todo reszta compileStmt

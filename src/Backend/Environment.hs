@@ -30,9 +30,10 @@ data CompilerState = CompilerState { sStrConstants :: StrConstants,
   deriving (Show)
 
 -- RetInfo --
-data RetInfo = Return LLVM.Type
+data RetInfo = Return (LLVM.Type, Reg)
              | ReturnNothing
-
+  deriving (Show, Eq, Ord)
+  
 -- compiler monad --
 type CM a = ReaderT Env (ExceptT String (StateT CompilerState IO)) a
 
