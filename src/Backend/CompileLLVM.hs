@@ -156,8 +156,8 @@ emitDeclItem t (Init line id e) = do
   llvmtype <- convTypeLLVMType t
   reg <- newRegister
   emitStmt $ Alloca reg llvmtype
-  exprReg <- compileExpr e
-  emitStmt $ Store llvmtype (VReg exprReg) (Ptr llvmtype) reg
+  exprVal <- compileExpr e
+  emitStmt $ Store llvmtype exprVal (Ptr llvmtype) reg
   return env
 
 -- convert between latte and llvm types --
@@ -193,18 +193,20 @@ compileTopDef (FnDef line t id args b) = do
   llvmtype <- convTypeLLVMType t
   env <- emitFunction llvmtype ident fArgs
   (retInfo, _) <- local (const env) $ compileBlock (BStmt line b)
-  -- todo add ret void if no ret void 
   fnType <- getFnType
   when (fnType == Tvoid && retInfo == ReturnNothing) $ emitStmt RetVoid
 
 -- compile exprs -- 
-compileExpr :: Expr -> CM Reg
-compileExpr (EVar _ id) = getIdentReg id
+compileExpr :: Expr -> CM Val
+compileExpr (EVar _ id) = do
+  reg <- getIdentReg id
+  return $ VReg reg
 compileExpr (ELitInt _ i) = do
-  reg <- newRegister
-  emitStmt $ Alloca reg Ti32
-  emitStmt $ Store Ti32 (VConst i) (Ptr Ti32) reg
-  emitLoad Ti32 reg
+  return $ VConst i
+compileExpr (ELitTrue _) = return VTrue
+compileExpr (ELitFalse _) = return VFalse
+--compileExpr (EApp _ id exprs) = do
+
 
 -- todo reszta compileExpr
 
@@ -225,12 +227,12 @@ compileBlockStmts [] = do
 compileBlockStmts (s:ss) = do
   ret <- compileStmt s
   case ret of
-    (Return (t, reg), _) -> do
+    (Return (t, val), _) -> do
       case t of
         LLVM.Tvoid -> do
           emitStmt LLVM.RetVoid
         _ ->
-          emitStmt $ LLVM.Ret t (VReg reg)
+          emitStmt $ LLVM.Ret t val
       return ret
     (ReturnNothing, env) -> do
       local (const env) $ compileBlockStmts ss
@@ -255,13 +257,13 @@ compileStmt (Decl line t items) = do
 -- todo reszta compileStmt 
 
 compileStmt (Latte.Ret _ expr) = do
-  reg <- compileExpr expr
+  val <- compileExpr expr
   env <- ask
   t <- getFnType
-  return (Return (t, reg), env)
-compileStmt (VRet _) = do -- todo nie wypisuje sie w void funkcjach bez returna
+  return (Return (t, val), env)
+compileStmt (VRet _) = do 
   env <- ask
   emitStmt RetVoid
-  return (Return (Tvoid, Reg 0), env)
+  return (Return (Tvoid, VNull), env)
 
 -- todo reszta compileStmt
