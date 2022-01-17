@@ -21,7 +21,7 @@ data Env = Env {eValEnv :: ValEnv,
 
 -- compiler state monad -- 
 type Functions = [Fn] 
-type StrConstants = Map.Map Int StrConstant
+type StrConstants = [StrConstant]
 type FunctionTypes = Map.Map String (LLVM.Type, [LLVM.Type])
 
 data CompilerState = CompilerState { sStrConstants :: StrConstants,
@@ -42,7 +42,7 @@ type CM a = ReaderT Env (ExceptT String (StateT CompilerState IO)) a
 -- initial environment --
 initCompilerState :: CompilerState
 initCompilerState = CompilerState {
-  sStrConstants = Map.empty,
+  sStrConstants = [],
   sFunctions = [],
   sCurrReg = Reg 0,
   sCurrLabel = Label 0,

@@ -13,6 +13,7 @@ import Common.Runtime
 -- function for starting compilation --
 runMain :: Program -> CM String
 runMain (Program line tds) = do
+  emitStrConst ""
   addFnTypesToState (tds ++ libraryFunctions line)
   state <- get
   env <- compileTopDefs tds
@@ -127,6 +128,16 @@ emitArgsDecl reg ((t, strId):args) = do
   let (Reg r) = reg
   local (const (env {eValEnv = newValEnv})) $ emitArgsDecl (Reg (r + 1)) args
 
+-- emit string constant -- 
+emitStrConst :: String -> CM (Int, Int)
+emitStrConst str = do
+  state <- get
+  let l = length str
+  let id = length (sStrConstants state) 
+  let strConst = StrConstant id l str
+  put $ state { sStrConstants = strConst:sStrConstants state}
+  return (id, l)
+
 -- add function to compiler state --
 emitFunction :: Label -> LLVM.Type -> String -> [(LLVM.Type, String)] -> CM Env
 emitFunction label t name args = do
@@ -188,7 +199,7 @@ emitDeclItem t (Init line id e) = do
   llvmtype <- convTypeLLVMType t
   reg <- newRegister
   emitStmt $ Alloca reg llvmtype
-  exprVal <- compileExpr e
+  (_, exprVal) <- compileExpr e
   emitStmt $ Store llvmtype exprVal (Ptr llvmtype) reg
   newValEnv <- declareVarInEnv llvmtype id reg
   return $ env { eValEnv = newValEnv }
@@ -225,7 +236,6 @@ convRelOpCond relOp =
     EQU _ -> RelEQ
     NE _ -> RelNE
 
-
 -- add function types to compiler state --
 addFnTypesToState :: [TopDef] -> CM ()
 addFnTypesToState [] = return ()
@@ -259,21 +269,21 @@ compileTopDef (FnDef line t id args b) = do
 compileExprList :: [Expr] -> CM [Val]
 compileExprList [] = return []
 compileExprList (expr:exprs) = do
-  v <- compileExpr expr
+  (_, v) <- compileExpr expr
   valList <- compileExprList exprs
   return $ v : valList
 
 -- compile exprs -- 
 -- always returns value or register which isn't a pointer --
-compileExpr :: Expr -> CM Val
+compileExpr :: Expr -> CM (LLVM.Type, Val)
 compileExpr (EVar _ id) = do
   (t, reg) <- getIdentTypeReg id
   reg2 <- emitLoad t reg
-  return $ VReg reg2
+  return (t, VReg reg2)
 compileExpr (ELitInt _ i) = do
-  return $ VConst i
-compileExpr (ELitTrue _) = return VTrue
-compileExpr (ELitFalse _) = return VFalse
+  return (Ti32, VConst i)
+compileExpr (ELitTrue _) = return (Ti1, VTrue)
+compileExpr (ELitFalse _) = return (Ti1, VFalse)
 compileExpr (EApp _ id exprs) = do
   let (Ident ident) = id
   t <- getFnType ident
@@ -283,48 +293,50 @@ compileExpr (EApp _ id exprs) = do
   case t of
     Tvoid -> do
       emitStmt $ CallVoid t ident llArgs
-      return VNull
+      return (Ti32, VConst 0)
     _ -> do
       reg <- newRegister
       emitStmt $ Call reg t ident llArgs
-      return $ VReg reg
-compileExpr (EString _ s) = return VNull -- todo
+      return (t, VReg reg)
+compileExpr (EString _ s) = do
+  (id, l) <- emitStrConst s
+  return (Ptr Ti8, VGetElementPtr id l s)
 compileExpr (Neg _ expr) = do
-  e <- compileExpr expr
+  (_, e) <- compileExpr expr
   reg <- newRegister
   emitStmt $ Arithm reg Ti32 (VConst 0) e Sub
-  return (VReg reg)
+  return (Ti1, VReg reg)
 compileExpr (Not _ expr) = do
-  e <- compileExpr expr
+  (_, e) <- compileExpr expr
   reg <- newRegister
   emitStmt $ Xor reg Ti1 e VTrue
-  return (VReg reg)
+  return (Ti1, VReg reg)
 compileExpr (EMul _ expr1 op expr2) = do
-  e1 <- compileExpr expr1
-  e2 <- compileExpr expr2
+  (_, e1) <- compileExpr expr1
+  (_, e2) <- compileExpr expr2
   reg <- newRegister
   case op of
     (Times _) -> emitStmt $ Arithm reg Ti32 e1 e2 Mul
     (Latte.Div _) -> emitStmt $ Arithm reg Ti32 e1 e2 LLVM.Div
     (Mod _) -> emitStmt $ Arithm reg Ti32 e1 e2 Rem
-  return (VReg reg)
+  return (Ti32, VReg reg)
 compileExpr (EAdd _ expr1 op expr2) = do
-  e1 <- compileExpr expr1
-  e2 <- compileExpr expr2
+  (t1, e1) <- compileExpr expr1
+  (t2, e2) <- compileExpr expr2
   -- todo dodawanie stringow (case na typ Val e1, czy ptr czy nie)
   reg <- newRegister
   case op of
     (Plus _) -> emitStmt $ Arithm reg Ti32 e1 e2 Add
     (Minus _) -> emitStmt $ Arithm reg Ti32 e1 e2 Sub
-  return (VReg reg)
+  return (Ti32, VReg reg)
 compileExpr (EAnd l expr1 expr2) = do
   compileExpr $ Not l (EOr l (Not l expr1) (Not l expr2))
 compileExpr (EOr _ expr1 expr2) = do
-  e1 <- compileExpr expr1
+  (_, e1) <- compileExpr expr1
   lStart <- getLabel
   lFalse <- newLabel
   emitNewBlock lFalse
-  e2 <- compileExpr expr2
+  (_, e2) <- compileExpr expr2
   lFalse2 <- getLabel
   lTrue <- newLabel
   emitStmtForLabel (Br lTrue) lFalse2
@@ -332,16 +344,16 @@ compileExpr (EOr _ expr1 expr2) = do
   emitStmtForLabel (BrCond Ti1 e1 lTrue lFalse) lStart
   reg <- newRegister
   emitStmt $ Phi reg Ti1 [(VTrue, lStart), (e2, lFalse2)]
-  return (VReg reg)
+  return (Ti1, VReg reg)
 compileExpr (ERel _ expr1 op expr2) = do
   let cond = convRelOpCond op
   -- todo bool 
   -- todo string
-  e1 <- compileExpr expr1 
-  e2 <- compileExpr expr2 
+  (t1, e1) <- compileExpr expr1 
+  (t2, e2) <- compileExpr expr2 
   reg <- newRegister
   emitStmt $ Cmp reg cond Ti32 e1 e2
-  return (VReg reg)
+  return (Ti1, VReg reg)
 
 -- compile stmts helpers --
 compileBlock :: Stmt -> CM (RetInfo, Env)
@@ -388,31 +400,31 @@ compileStmt (Decl line t items) = do
   return (ReturnNothing, env)
 compileStmt (Ass _ id expr) = do
   env <- ask
-  e <- compileExpr expr
+  (_, e) <- compileExpr expr
   (t, r) <- getIdentTypeReg id
   emitStmt $ Store t e (Ptr t) r
   return (ReturnNothing, env)
 compileStmt (Incr l id) = do
   env <- ask
   (_, r) <- getIdentTypeReg id
-  reg <- compileExpr (EAdd l (EVar l id) (Plus l) (ELitInt l 1))
+  (_, reg) <- compileExpr (EAdd l (EVar l id) (Plus l) (ELitInt l 1))
   emitStmt $ Store Ti32 reg (Ptr Ti32) r
   return (ReturnNothing, env)
 compileStmt (Decr l id) = do
   env <- ask
   (_, r) <- getIdentTypeReg id
-  reg <- compileExpr (EAdd l (EVar l id) (Minus l) (ELitInt l 1))
+  (_, reg) <- compileExpr (EAdd l (EVar l id) (Minus l) (ELitInt l 1))
   emitStmt $ Store Ti32 reg (Ptr Ti32) r
   return (ReturnNothing, env)
 compileStmt (Latte.Ret _ expr) = do
-  val <- compileExpr expr
+  (_, val) <- compileExpr expr
   env <- ask
   t <- getCurrFnType
   return (Return (t, val), env)
 compileStmt (VRet _) = do
   env <- ask
   emitStmt RetVoid
-  return (Return (Tvoid, VNull), env)
+  return (Return (Tvoid, VConst 0), env)
 compileStmt (SExp _ expr) = do
   env <- ask
   compileExpr expr
@@ -426,7 +438,7 @@ compileStmt (Cond _ expr block) = do
     ELitFalse _ -> do
       return (ReturnNothing, env)
     _ -> do
-      e <- compileExpr expr
+      (_, e) <- compileExpr expr
       lStart <- getLabel
       lTrue <- newLabel
       emitNewBlock lTrue
@@ -447,7 +459,7 @@ compileStmt (CondElse _ expr block1 block2) = do
       (retVal, _) <- local (const env) $ compileBlock block2
       return (retVal, env)
     _ -> do
-      e <- compileExpr expr
+      (_, e) <- compileExpr expr
       lStart <- getLabel
       lTrue <- newLabel
       emitNewBlock lTrue
@@ -469,7 +481,7 @@ compileStmt (While _ expr block) = do
   lStart0 <- getLabel
   lStart <- newLabel
   emitNewBlock lStart
-  e <- compileExpr expr
+  (_, e) <- compileExpr expr
   lStart2 <- getLabel
   lBlock <- newLabel
   emitNewBlock lBlock
@@ -479,5 +491,4 @@ compileStmt (While _ expr block) = do
   emitNewBlock lEnd
   emitStmtForLabel (Br lStart) lStart0
   emitStmtForLabel (BrCond Ti1 e lBlock lEnd) lStart2
-
   return (ReturnNothing, env) 

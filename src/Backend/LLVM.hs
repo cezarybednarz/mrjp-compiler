@@ -3,15 +3,13 @@ import           Data.Map             as Map
 
 data Val = VConst Integer
          | VReg Reg
-         | VGetElementPtr Int String
+         | VGetElementPtr Int Int String -- id length value
          | VTrue
          | VFalse
-         | VUndef
-         | VNull
   deriving (Eq, Ord)
 
 data Reg = Reg Integer
-         | RArg String
+         | StrReg Integer
   deriving (Eq, Ord)
 
 newtype Label = Label Integer
@@ -38,16 +36,12 @@ data LLVMStmt = Call Reg Type String [(Type, Val)]
               | Alloca Reg Type
               | Cmp Reg Cond Type Val Val
               | Xor Reg Type Val Val
-              | Unreachable
-              | GetElementPtr Reg Type Type Val Type Val
-              | Bitcast Reg Type Val Type
-              | Sext Reg Type Val Type
               | Phi Reg Type [(Val, Label)]
   deriving (Eq, Ord)
 
 data LLBlock = LLBlock { bLabel :: Label,
-                     bStmts :: [LLVMStmt]}
-                     -- todo bExit LLVMStmt ??
+                     bStmts :: [LLVMStmt]
+                  }
   deriving (Eq, Ord, Show)
 
 data Fn = Fn { fType :: Type,
@@ -71,7 +65,7 @@ data ArithmOp = Add
               | Rem
   deriving (Eq, Ord)
 
-data StrConstant = StrConstant Int String String
+data StrConstant = StrConstant Int Int String
   deriving (Eq, Ord, Show)
 
 -- show for llvm types --
@@ -101,8 +95,6 @@ instance Show Val where
   -- show (VGetElementPtr Int String) =
   show VTrue = "true"
   show VFalse = "false"
-  -- show VUndef = 
-  -- show VNull = 
 
 instance Show Label where
   show (Label l) = show l
