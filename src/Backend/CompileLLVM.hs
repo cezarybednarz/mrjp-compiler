@@ -316,7 +316,7 @@ compileExpr (EOr _ expr1 expr2) = do
   e2 <- compileExpr expr2
   lFalse2 <- getLabel
   lTrue <- newLabel
-  emitStmtForLabel (Br lTrue) lFalse2
+  emitStmtForLabel (Br lTrue) lFalse2 -- todo moze lFalse2
   emitNewBlock lTrue
   emitStmtForLabel (BrCond Ti1 e1 lTrue lFalse) lStart
   reg <- newRegister
@@ -415,9 +415,10 @@ compileStmt (Cond _ expr block) = do
       lTrue <- newLabel
       emitNewBlock lTrue
       local (const env) $ compileBlock block
+      lTrue2 <- getLabel
       lFalse <- newLabel
       emitNewBlock lFalse
-      emitStmtForLabel (Br lFalse) lTrue
+      emitStmtForLabel (Br lFalse) lTrue2
       emitStmtForLabel (BrCond Ti1 e lTrue lFalse) lStart
       return (ReturnNothing, env)
 compileStmt (CondElse _ expr block1 block2) = do
