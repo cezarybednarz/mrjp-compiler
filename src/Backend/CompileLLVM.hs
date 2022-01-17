@@ -316,7 +316,7 @@ compileExpr (EOr _ expr1 expr2) = do
   e2 <- compileExpr expr2
   lFalse2 <- getLabel
   lTrue <- newLabel
-  emitStmtForLabel (Br lTrue) lFalse2 -- todo moze lFalse2
+  emitStmtForLabel (Br lTrue) lFalse2
   emitNewBlock lTrue
   emitStmtForLabel (BrCond Ti1 e1 lTrue lFalse) lStart
   reg <- newRegister
@@ -418,12 +418,36 @@ compileStmt (Cond _ expr block) = do
       lTrue2 <- getLabel
       lFalse <- newLabel
       emitNewBlock lFalse
-      emitStmtForLabel (Br lFalse) lTrue2
       emitStmtForLabel (BrCond Ti1 e lTrue lFalse) lStart
+      emitStmtForLabel (Br lFalse) lTrue2
       return (ReturnNothing, env)
 compileStmt (CondElse _ expr block1 block2) = do
   env <- ask
-  return (ReturnNothing, env) -- todo
+  case expr of 
+    ELitTrue _ -> do 
+      (retVal, _) <- local (const env) $ compileBlock block1
+      return (retVal, env)
+    ELitFalse _ -> do
+      (retVal, _) <- local (const env) $ compileBlock block2
+      return (retVal, env)
+    _ -> do
+      e <- compileExpr expr
+      lStart <- getLabel
+      lTrue <- newLabel
+      emitNewBlock lTrue
+      local (const env) $ compileBlock block1
+      lTrue2 <- getLabel
+      lFalse <- newLabel
+      emitNewBlock lFalse
+      local (const env) $ compileBlock block2
+      lFalse2 <- getLabel
+      lEnd <- newLabel
+      emitNewBlock lEnd
+      emitStmtForLabel (BrCond Ti1 e lTrue lFalse) lStart
+      emitStmtForLabel (Br lEnd) lTrue2
+      emitStmtForLabel (Br lEnd) lFalse2
+      return (ReturnNothing, env)
+  return (ReturnNothing, env)
 compileStmt (While _ expr block) = do
   env <- ask
   return (ReturnNothing, env) -- todo

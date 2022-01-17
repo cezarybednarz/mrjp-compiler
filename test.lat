@@ -1,16 +1,21 @@
 
 int main() {
+  
   int i = 3;
   boolean b = false || (true && true) || false;
   if (true || true) {
     printInt(1);
     i = 4;
-    if (false || false || b) {
+    if (false && (false || false || b)) {
       printInt(2);
       int i = 6;
+    }
+    else {
+      printInt(42);
     }
     int i = 5;
   }
   printInt(i);
+  
   return 0;
 }
