@@ -228,10 +228,9 @@ printLLVMProgram strConstants fns =
     "declare i32 @readInt()",
     "declare i8* @readString()",
     "declare void @error()",
-    "declare i32 @equStrings(i8*, i8*)",
-    "declare i32 @neStrings(i8*, i8*)",
-    "declare i8* @concatStrings(i8*, i8*)",
-    "declare i32 @compareStrings(i8*, i8*)"
+    "declare i32 @__equStrings__(i8*, i8*)",
+    "declare i32 @__neStrings__(i8*, i8*)",
+    "declare i8* @__concatStrings__(i8*, i8*)"
   ]
   ++
   printStrConstants strConstants

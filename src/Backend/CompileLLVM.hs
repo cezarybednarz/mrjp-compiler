@@ -332,7 +332,7 @@ compileExpr (EAdd _ expr1 op expr2) = do
       return (Ti32, VReg reg)
     _ -> do
       reg <- newRegister
-      emitStmt $ Call reg (Ptr Ti8) "concatStrings" [(t1, e1), (t2, e2)]
+      emitStmt $ Call reg (Ptr Ti8) "__concatStrings__" [(t1, e1), (t2, e2)]
       return (Ptr Ti8, VReg reg)
 compileExpr (EAnd l expr1 expr2) = do
   compileExpr $ Not l (EOr l (Not l expr1) (Not l expr2))
@@ -364,9 +364,11 @@ compileExpr (ERel _ expr1 op expr2) = do
       return (Ti1, VReg reg)
     (Ptr Ti8) -> do
       case cond of
-        RelEQ -> emitStmt $ Call reg (Ptr Ti8) "equStrings" [(Ptr Ti8, e1), (Ptr Ti8, e2)]
-        RelNE -> emitStmt $ Call reg (Ptr Ti8) "neStrings" [(Ptr Ti8, e1), (Ptr Ti8, e2)]
-      return (Ptr Ti8, VReg reg)
+        RelEQ -> emitStmt $ Call reg Ti32 "__equStrings__" [(Ptr Ti8, e1), (Ptr Ti8, e2)]
+        RelNE -> emitStmt $ Call reg Ti32 "__neStrings__" [(Ptr Ti8, e1), (Ptr Ti8, e2)]
+      reg2 <- newRegister
+      emitStmt $ Cmp reg2 RelEQ Ti32 (VConst 1) (VReg reg)
+      return (Ptr Ti8, VReg reg2)
       
 -- compile stmts helpers --
 compileBlock :: Stmt -> CM (RetInfo, Env)

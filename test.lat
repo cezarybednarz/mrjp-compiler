@@ -1,6 +1,11 @@
 
 int main() {
-  string s = "hello";
-  printString(s);
+  string hello = "hello";
+  string space = "" + " ";
+  string wor = "wor";
+  string ld = "ld";
+  if ("hello world" == hello + space + wor + ld) {
+    printString("OK");
+  }
   return 0;
 }
