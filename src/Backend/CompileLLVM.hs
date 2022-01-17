@@ -306,19 +306,21 @@ compileExpr (EAdd _ expr1 op expr2) = do
     (Plus _) -> emitStmt $ Arithm reg Ti32 e1 e2 Add
     (Minus _) -> emitStmt $ Arithm reg Ti32 e1 e2 Sub
   return (VReg reg)
-compileExpr (EAnd _ expr1 expr2) = return VNull -- todo
+compileExpr (EAnd l expr1 expr2) = do
+  compileExpr $ Not l (EOr l (Not l expr1) (Not l expr2))
 compileExpr (EOr _ expr1 expr2) = do
-  lStart <- getLabel
   e1 <- compileExpr expr1
+  lStart <- getLabel
   lFalse <- newLabel
   emitNewBlock lFalse
   e2 <- compileExpr expr2
+  lFalse2 <- getLabel
   lTrue <- newLabel
-  emitStmtForLabel  (Br lTrue) lFalse
+  emitStmtForLabel (Br lTrue) lFalse2
   emitNewBlock lTrue
   emitStmtForLabel (BrCond Ti1 e1 lTrue lFalse) lStart
   reg <- newRegister
-  emitStmt $ Phi reg Ti1 [(VTrue, lStart), (e2, lFalse)]
+  emitStmt $ Phi reg Ti1 [(VTrue, lStart), (e2, lFalse2)]
   return (VReg reg)
 compileExpr (ERel _ expr1 op expr2) = return VNull -- todo
 
@@ -401,7 +403,23 @@ compileStmt (SExp _ expr) = do
   return (ReturnNothing, env)
 compileStmt (Cond _ expr block) = do
   env <- ask
-  return (ReturnNothing, env) -- todo
+  case expr of
+    ELitTrue _ -> do
+      (retVal, _) <- local (const env) $ compileBlock block
+      return (retVal, env)
+    ELitFalse _ -> do
+      return (ReturnNothing, env)
+    _ -> do
+      e <- compileExpr expr
+      lStart <- getLabel
+      lTrue <- newLabel
+      emitNewBlock lTrue
+      local (const env) $ compileBlock block
+      lFalse <- newLabel
+      emitNewBlock lFalse
+      emitStmtForLabel (Br lFalse) lTrue
+      emitStmtForLabel (BrCond Ti1 e lTrue lFalse) lStart
+      return (ReturnNothing, env)
 compileStmt (CondElse _ expr block1 block2) = do
   env <- ask
   return (ReturnNothing, env) -- todo

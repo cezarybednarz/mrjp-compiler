@@ -8,87 +8,40 @@ declare i32 @neStrings(i8*, i8*)
 declare i8* @concatStrings(i8*, i8*)
 declare i32 @compareStrings(i8*, i8*)
 
-define i32 @sub(i32 %0, i32 %1) {
-  %3 = alloca i32
-  store i32 %0, i32* %3
-  %4 = alloca i32
-  store i32 %1, i32* %4
-  %5 = load i32, i32* %3
-  %6 = load i32, i32* %4
-  %7 = sub i32 %5, %6
-  %8 = load i32, i32* %3
-  %9 = load i32, i32* %3
-  %10 = sub i32 %8, %9
-  %11 = add i32 %7, %10
-  %12 = load i32, i32* %4
-  %13 = load i32, i32* %4
-  %14 = sub i32 %12, %13
-  %15 = add i32 %11, %14
-  %16 = load i32, i32* %3
-  %17 = add i32 %15, %16
-  %18 = load i32, i32* %3
-  %19 = sub i32 0, %18
-  %20 = add i32 %17, %19
-  ret i32 %20
-}
-
-define void @p(i32 %0, i32 %1, i1 %2) {
-  %4 = alloca i32
-  store i32 %0, i32* %4
-  %5 = alloca i32
-  store i32 %1, i32* %5
-  %6 = alloca i1
-  store i1 %2, i1* %6
-  %7 = load i32, i32* %4
-  %8 = load i32, i32* %5
-  %9 = add i32 %7, %8
-  call void @printInt(i32 %9)
-  ret void
-}
-
 define i32 @main() {
-  %1 = alloca i32
-  store i32 4, i32* %1
-  %2 = alloca i32
-  store i32 3, i32* %2
-  %3 = load i32, i32* %2
-  %4 = load i32, i32* %2
-  %5 = sub i32 0, %4
-  %6 = add i32 %3, %5
-  %7 = load i32, i32* %1
-  %8 = add i32 %6, %7
-  store i32 %8, i32* %1
-  %9 = load i32, i32* %1
-  %10 = load i32, i32* %1
-  %11 = mul i32 %9, %10
-  %12 = load i32, i32* %1
-  %13 = sdiv i32 %11, %12
-  store i32 %13, i32* %1
-  %14 = load i32, i32* %1
-  %15 = add i32 %14, 1
-  store i32 %15, i32* %1
-  %16 = load i32, i32* %1
-  %17 = sub i32 %16, 1
-  store i32 %17, i32* %1
-  %18 = load i32, i32* %2
-  %19 = add i32 %18, 1
-  store i32 %19, i32* %2
-  %20 = load i32, i32* %2
+  %1 = alloca i1
+  br i1 true, label %6, label %2
+2:
+  br i1 true, label %4, label %3
+3:
+  br label %4
+4:
+  %5 = phi i1 [ true, %2 ], [ true, %3 ]
+  br label %6
+6:
+  %7 = phi i1 [ true, %0 ], [ %5, %4 ]
+  store i1 %7, i1* %1
+  %8 = alloca i1
+  %9 = load i1, i1* %1
+  %10 = xor i1 %9, true
+  br i1 %10, label %13, label %11
+11:
+  %12 = xor i1 false, true
+  br label %13
+13:
+  %14 = phi i1 [ true, %6 ], [ %12, %11 ]
+  %15 = xor i1 %14, true
+  %16 = xor i1 %15, true
+  store i1 %16, i1* %8
+  %17 = load i1, i1* %8
+  br i1 %17, label %18, label %22
+18:
+  %19 = mul i32 1, 1
+  %20 = add i32 %19, 1
   %21 = sub i32 %20, 1
-  store i32 %21, i32* %2
-  %22 = load i32, i32* %1
-  %23 = load i32, i32* %2
-  %24 = sub i32 %22, %23
-  %25 = load i32, i32* %1
-  %26 = load i32, i32* %1
-  %27 = sub i32 %25, %26
-  call void @p(i32 %24, i32 %27, i1 true)
-  %28 = load i32, i32* %1
-  %29 = load i32, i32* %2
-  %30 = call i32 @sub(i32 %28, i32 %29)
-  %31 = srem i32 1000, 10
-  %32 = add i32 %30, %31
-  call void @printInt(i32 %32)
+  call void @printInt(i32 %21)
+  br label %22
+22:
   ret i32 0
 }
 

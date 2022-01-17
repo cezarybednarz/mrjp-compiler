@@ -123,9 +123,9 @@ instance Show LLVMStmt where
   show (Ret t val) = "ret " ++ show t ++ " " ++ show val
   show (Arithm reg t v1 v2 op) = show reg ++ " = " ++ show op ++ " "
     ++ show t ++ " " ++ show v1 ++ ", " ++ show v2
-  show (Br label) = "br " ++ showLabelReg label
+  show (Br label) = "br label " ++ showLabelReg label
   show (BrCond t val l1 l2) = "br " ++ show t ++ " " ++ show val 
-    ++ ", " ++ showLabelReg l1 ++ ", " ++ showLabelReg l2
+    ++ ", label " ++ showLabelReg l1 ++ ", label " ++ showLabelReg l2
   show (Load r1 t1 t2 r2) = show r1 ++ " = load " ++ show t1 ++ ", "
     ++ show t2 ++ " " ++ show r2
   show (Store t1 v1 t2 r) = "store " ++ show t1 ++ " " ++ show v1 ++ ", "

@@ -1,7 +1,9 @@
 
 int main() {
-  boolean a = true;
-  boolean b = false;
-  boolean c = a || b;
+  boolean a = true || (true || true);
+  boolean b = !(a && false);
+  if (b) {
+    printInt(1 * 1 + 1 - 1);
+  }
   return 0;
 }
