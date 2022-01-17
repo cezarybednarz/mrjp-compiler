@@ -9,22 +9,24 @@ declare i8* @__concatStrings__(i8*, i8*)
 @.str.0 = private unnamed_addr constant [1 x i8] c"\00", align 1
 
 define i32 @main() {
-  %1 = alloca i32
+  br label %1
+1:
   %2 = call i32 @readInt()
-  store i32 %2, i32* %1
-  %3 = alloca i8*
+  %3 = alloca i32
+  store i32 %2, i32* %3
   %4 = call i8* @readString()
-  store i8* %4, i8** %3
   %5 = alloca i8*
+  store i8* %4, i8** %5
   %6 = call i8* @readString()
-  store i8* %6, i8** %5
-  %7 = load i32, i32* %1
-  %8 = sub i32 %7, 5
-  call void @printInt(i32 %8)
-  %9 = load i8*, i8** %3
+  %7 = alloca i8*
+  store i8* %6, i8** %7
+  %8 = load i32, i32* %3
+  %9 = sub i32 %8, 5
+  call void @printInt(i32 %9)
   %10 = load i8*, i8** %5
-  %11 = call i8* @__concatStrings__(i8* %9, i8* %10)
-  call void @printString(i8* %11)
+  %11 = load i8*, i8** %7
+  %12 = call i8* @__concatStrings__(i8* %10, i8* %11)
+  call void @printString(i8* %12)
   ret i32 0
 }
 

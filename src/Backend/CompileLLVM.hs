@@ -145,6 +145,13 @@ emitStrConst str = do
   put $ state { sStrConstants = strConst:sStrConstants state}
   return (id, l)
 
+-- emit first label --
+emitFirstLabel :: Label -> CM ()
+emitFirstLabel label = do
+  label2 <- newLabel
+  emitNewBlock label2
+  emitStmtForLabel (Br label2) (Label 0) 
+
 -- add function to compiler state --
 emitFunction :: Label -> LLVM.Type -> String -> [(LLVM.Type, String)] -> CM Env
 emitFunction label t name args = do
@@ -162,7 +169,10 @@ emitFunction label t name args = do
   }
   emitNewBlock label
   setRegister $ Reg (toInteger $ length args + 1)
+  label2 <- getLabel
+  emitFirstLabel label
   emitArgsDecl (Reg 0) args
+  
 
 -- add empty block to current function -- 
 emitNewBlock :: Label -> CM ()
@@ -206,9 +216,9 @@ emitDeclItem t (NoInit line id) = do
 emitDeclItem t (Init line id e) = do
   env <- ask
   llvmtype <- convTypeLLVMType t
+  (_, exprVal) <- compileExpr e
   reg <- newRegister
   emitStmt $ Alloca reg llvmtype
-  (_, exprVal) <- compileExpr e
   emitStmt $ Store llvmtype exprVal (Ptr llvmtype) reg
   newValEnv <- declareVarInEnv llvmtype id reg
   return $ env { eValEnv = newValEnv }
