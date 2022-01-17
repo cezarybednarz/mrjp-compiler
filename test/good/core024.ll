@@ -4,7 +4,6 @@ declare i32 @readInt()
 declare i8* @readString()
 declare void @error()
 declare i32 @__equStrings__(i8*, i8*)
-declare i32 @__neStrings__(i8*, i8*)
 declare i8* @__concatStrings__(i8*, i8*)
 @.str.2 = private unnamed_addr constant [5 x i8] c"NOOO\00", align 1
 @.str.1 = private unnamed_addr constant [4 x i8] c"yes\00", align 1

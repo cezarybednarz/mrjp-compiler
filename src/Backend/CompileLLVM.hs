@@ -1,14 +1,14 @@
 module Backend.CompileLLVM where
 
-import Control.Monad.State
-import Control.Monad.Reader
-import Control.Monad.Except
+import           Control.Monad.Except
+import           Control.Monad.Reader
+import           Control.Monad.State
 import           Data.Map             as Map
 
-import Backend.Environment
-import Backend.LLVM as LLVM
-import Latte.Abs as Latte
-import Common.Runtime
+import           Backend.Environment
+import           Backend.LLVM         as LLVM
+import           Common.Runtime
+import           Latte.Abs            as Latte
 
 -- function for starting compilation --
 runMain :: Program -> CM String
@@ -23,7 +23,7 @@ runMain (Program line tds) = do
 
 -- compiler state modifiers --
 
--- register and label setters -- 
+-- register and label setters --
 newRegister :: CM Reg
 newRegister = do
   state <- get
@@ -98,7 +98,7 @@ getLabel :: CM Label
 getLabel = do
   gets sCurrLabel
 
--- emit instruction to current block in current function -- 
+-- emit instruction to current block in current function --
 emitStmt :: LLVMStmt -> CM ()
 emitStmt llvmstmt = do
   label <- getLabel
@@ -123,7 +123,7 @@ emitLoad t reg = do
   emitStmt $ Load reg2 t (Ptr t) reg
   return reg2
 
--- emit arguments declaration -- 
+-- emit arguments declaration --
 emitArgsDecl :: Reg -> [(LLVM.Type, String)] -> CM Env
 emitArgsDecl reg [] = ask
 emitArgsDecl reg ((t, strId):args) = do
@@ -135,7 +135,7 @@ emitArgsDecl reg ((t, strId):args) = do
   let (Reg r) = reg
   local (const (env {eValEnv = newValEnv})) $ emitArgsDecl (Reg (r + 1)) args
 
--- emit string constant -- 
+-- emit string constant --
 emitStrConst :: String -> CM (Int, Int)
 emitStrConst str = do
   state <- get
@@ -150,7 +150,7 @@ emitFirstLabel :: Label -> CM ()
 emitFirstLabel label = do
   label2 <- newLabel
   emitNewBlock label2
-  emitStmtForLabel (Br label2) (Label 0) 
+  emitStmtForLabel (Br label2) (Label 0)
 
 -- add function to compiler state --
 emitFunction :: Label -> LLVM.Type -> String -> [(LLVM.Type, String)] -> CM Env
@@ -172,9 +172,9 @@ emitFunction label t name args = do
   label2 <- getLabel
   emitFirstLabel label
   emitArgsDecl (Reg 0) args
-  
 
--- add empty block to current function -- 
+
+-- add empty block to current function --
 emitNewBlock :: Label -> CM ()
 emitNewBlock label = do
   state <- get
@@ -249,11 +249,11 @@ convRelOpCond :: RelOp -> Cond
 convRelOpCond relOp =
   case relOp of
     LTH _ -> RelSLT
-    LE _ -> RelSLE
+    LE _  -> RelSLE
     GTH _ -> RelSGT
-    GE _ -> RelSGE
+    GE _  -> RelSGE
     EQU _ -> RelEQ
-    NE _ -> RelNE
+    NE _  -> RelNE
 
 -- add function types to compiler state --
 addFnTypesToState :: [TopDef] -> CM ()
@@ -305,7 +305,7 @@ compileExprList (expr:exprs) = do
   valList <- compileExprList exprs
   return $ v : valList
 
--- compile exprs -- 
+-- compile exprs --
 -- always returns value or register which isn't a pointer --
 compileExpr :: Expr -> CM (LLVM.Type, Val)
 compileExpr (EVar _ id) = do
@@ -348,9 +348,9 @@ compileExpr (EMul _ expr1 op expr2) = do
   (_, e2) <- compileExpr expr2
   reg <- newRegister
   case op of
-    (Times _) -> emitStmt $ Arithm reg Ti32 e1 e2 Mul
+    (Times _)     -> emitStmt $ Arithm reg Ti32 e1 e2 Mul
     (Latte.Div _) -> emitStmt $ Arithm reg Ti32 e1 e2 LLVM.Div
-    (Mod _) -> emitStmt $ Arithm reg Ti32 e1 e2 Rem
+    (Mod _)       -> emitStmt $ Arithm reg Ti32 e1 e2 Rem
   return (Ti32, VReg reg)
 compileExpr (EAdd _ expr1 op expr2) = do
   (t1, e1) <- compileExpr expr1
@@ -359,7 +359,7 @@ compileExpr (EAdd _ expr1 op expr2) = do
     Ti32 -> do
       reg <- newRegister
       case op of
-        (Plus _) -> emitStmt $ Arithm reg Ti32 e1 e2 Add
+        (Plus _)  -> emitStmt $ Arithm reg Ti32 e1 e2 Add
         (Minus _) -> emitStmt $ Arithm reg Ti32 e1 e2 Sub
       return (Ti32, VReg reg)
     _ -> do
@@ -395,11 +395,9 @@ compileExpr (ERel _ expr1 op expr2) = do
       emitStmt $ Cmp reg cond Ti32 e1 e2
       return (Ti1, VReg reg)
     (Ptr Ti8) -> do
-      case cond of
-        RelEQ -> emitStmt $ Call reg Ti32 "__equStrings__" [(Ptr Ti8, e1), (Ptr Ti8, e2)]
-        RelNE -> emitStmt $ Call reg Ti32 "__neStrings__" [(Ptr Ti8, e1), (Ptr Ti8, e2)]
+      emitStmt $ Call reg Ti32 "__equStrings__" [(Ptr Ti8, e1), (Ptr Ti8, e2)]
       reg2 <- newRegister
-      emitStmt $ Cmp reg2 RelEQ Ti32 (VConst 1) (VReg reg)
+      emitStmt $ Cmp reg2 cond Ti32 (VConst 1) (VReg reg)
       return (Ptr Ti8, VReg reg2)
 
 -- compile stmts helpers --
@@ -437,7 +435,7 @@ compileDecl t (x:xs) = do
   env <- emitDeclItem t x
   local (const env) $ compileDecl t xs
 
--- compile stmts-- 
+-- compile stmts--
 compileStmt :: Stmt -> CM (RetInfo, Env)
 compileStmt (Empty _) = do
   env <- ask

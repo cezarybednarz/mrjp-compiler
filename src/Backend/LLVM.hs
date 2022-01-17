@@ -1,5 +1,5 @@
 module Backend.LLVM where
-import           Data.Map             as Map
+import           Data.Map as Map
 
 data Val = VConst Integer
          | VReg Reg
@@ -39,13 +39,13 @@ data LLVMStmt = Call Reg Type String [(Type, Val)]
   deriving (Eq, Ord)
 
 data LLBlock = LLBlock { bLabel :: Label,
-                     bStmts :: [LLVMStmt]
+                     bStmts     :: [LLVMStmt]
                   }
   deriving (Eq, Ord, Show)
 
-data Fn = Fn { fType :: Type,
-               fName :: String,
-               fArgs :: [(Type, String)],
+data Fn = Fn { fType   :: Type,
+               fName   :: String,
+               fArgs   :: [(Type, String)],
                fBlocks :: Map.Map Label LLBlock }
   deriving (Eq, Ord, Show)
 
@@ -70,8 +70,8 @@ data StrConstant = StrConstant Int Int String -- id length value
 -- show for llvm types --
 
 instance Show Cond where
-  show RelEQ = "eq"
-  show RelNE = "ne"
+  show RelEQ  = "eq"
+  show RelNE  = "ne"
   show RelSGT = "sgt"
   show RelSGE = "sge"
   show RelSLT = "slt"
@@ -108,11 +108,11 @@ showLabelReg label =
   "%" ++ show label
 
 instance Show Type where
-  show Ti64 = "i64"
-  show Ti32 = "i32"
-  show Tvoid = "void"
-  show Ti1 = "i1"
-  show Ti8 = "i8"
+  show Ti64    = "i64"
+  show Ti32    = "i32"
+  show Tvoid   = "void"
+  show Ti1     = "i1"
+  show Ti8     = "i8"
   show (Ptr t) = show t ++ "*"
 
 instance Show LLVMStmt where
@@ -139,7 +139,7 @@ instance Show LLVMStmt where
   show (Phi reg t phiArgs) = show reg ++ " = phi " ++ show t
     ++ " " ++ printPhiArgs True phiArgs
 
--- print llvm code from in-memory structures -- 
+-- print llvm code from in-memory structures --
 
 printPhiArgs :: Bool -> [(Val, Label)] -> String
 printPhiArgs _ [] = []
@@ -165,15 +165,15 @@ printStmt :: LLVMStmt -> String
 printStmt stmt = "  " ++ show stmt
 
 -- conversion to printable string --
-convertStr :: String -> String 
+convertStr :: String -> String
 convertStr "" = ""
-convertStr (c:str) = 
+convertStr (c:str) =
   case c of
     '\n' -> "\\" ++ "0A"
     '\\' -> "\\" ++ "%C"
     '\t' -> "\\" ++ "09"
-    '"' -> "\\" ++ "22"
-    cc -> [cc]
+    '"'  -> "\\" ++ "22"
+    cc   -> [cc]
   ++
   convertStr str
 
@@ -181,14 +181,14 @@ printStrConstants :: [StrConstant] -> [String]
 printStrConstants [] = []
 printStrConstants ((StrConstant id len str):strConstants) =
   ("@.str." ++ show id ++ " = private unnamed_addr constant ["
-  ++ show len ++ " x i8] c\"" ++ convertStr str ++ "\\00\", align 1") 
+  ++ show len ++ " x i8] c\"" ++ convertStr str ++ "\\00\", align 1")
   : printStrConstants strConstants
 
 printLLBlocks :: Bool -> [LLBlock] -> [String]
 printLLBlocks _ [] = []
 printLLBlocks first (block:blocks) = do
   let stmts = bStmts block
-  let blockStmts = Prelude.map printStmt (reverse stmts) -- todo 
+  let blockStmts = Prelude.map printStmt (reverse stmts) -- todo
   let nextBlockStmts = printLLBlocks False blocks
   if not first then
     showLabel (bLabel block) : blockStmts ++ nextBlockStmts
@@ -229,7 +229,6 @@ printLLVMProgram strConstants fns =
     "declare i8* @readString()",
     "declare void @error()",
     "declare i32 @__equStrings__(i8*, i8*)",
-    "declare i32 @__neStrings__(i8*, i8*)",
     "declare i8* @__concatStrings__(i8*, i8*)"
   ]
   ++

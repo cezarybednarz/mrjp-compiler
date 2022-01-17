@@ -3,7 +3,7 @@ module Frontend.Exception where
 import           Control.Monad.Except
 import           Frontend.Environment
 import           Latte.Abs
-import Latte.Print
+import           Latte.Print
 
 errMessage :: BNFC'Position -> SemanticAnalysisException -> String
 errMessage line exception =
@@ -34,7 +34,7 @@ data SemanticAnalysisException
     | VoidVaribaleDeclaration
     | InvalidStringOperator
     | FunctionRedeclared Ident
-    | StringInvalidRel 
+    | StringInvalidRel
 
 instance Show SemanticAnalysisException where
   show (FunctionUndeclared (Ident ident)) = "function " ++  show ident ++ " undeclared"

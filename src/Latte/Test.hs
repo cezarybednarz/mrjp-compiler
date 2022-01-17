@@ -2,25 +2,19 @@
 
 module Main where
 
-import Prelude
-  ( ($)
-  , Either(..)
-  , Int, (>)
-  , String, (++), unlines
-  , Show, show
-  , IO, (>>), (>>=), mapM_, putStrLn
-  , FilePath
-  , getContents, readFile
-  )
-import System.Environment ( getArgs )
-import System.Exit        ( exitFailure, exitSuccess )
-import Control.Monad      ( when )
+import           Control.Monad      (when)
+import           Prelude            (Either (..), FilePath, IO, Int, Show,
+                                     String, getContents, mapM_, putStrLn,
+                                     readFile, show, unlines, ($), (++), (>),
+                                     (>>), (>>=))
+import           System.Environment (getArgs)
+import           System.Exit        (exitFailure, exitSuccess)
 
-import Latte.Abs   ()
-import Latte.Lex   ( Token )
-import Latte.Par   ( pProgram, myLexer )
-import Latte.Print ( Print, printTree )
-import Latte.Skel  ()
+import           Latte.Abs          ()
+import           Latte.Lex          (Token)
+import           Latte.Par          (myLexer, pProgram)
+import           Latte.Print        (Print, printTree)
+import           Latte.Skel         ()
 
 type Err        = Either String
 type ParseFun a = [Token] -> Err a

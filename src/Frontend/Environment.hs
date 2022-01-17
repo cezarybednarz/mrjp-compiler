@@ -72,7 +72,7 @@ debug = do
   store <- get
   liftIO $ print " "
   liftIO $ print $ "vars:     " ++ show m1
-  liftIO $ print $ "funcs:    " ++ show m2 
+  liftIO $ print $ "funcs:    " ++ show m2
   liftIO $ print $ "fnRetVal: " ++ show fnRetVal
   liftIO $ print $ "scope:    " ++ show scope
   liftIO $ print "---------"

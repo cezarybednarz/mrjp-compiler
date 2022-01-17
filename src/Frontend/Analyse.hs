@@ -1,5 +1,6 @@
 module Frontend.Analyse where
 
+import           Common.Runtime
 import           Control.Monad.Except
 import           Control.Monad.Reader
 import           Control.Monad.State
@@ -8,7 +9,6 @@ import           Data.Maybe
 import           Frontend.Environment
 import           Frontend.Exception
 import           Latte.Abs
-import Common.Runtime
 
 -- run analysis from main --
 
@@ -22,7 +22,7 @@ runMain (Program line tds) = do
 -- analyse main --
 
 analyseMain :: BNFC'Position -> SAM ()
-analyseMain line = do 
+analyseMain line = do
   (VFunc t _ args _) <- getFunc line (Ident "main")
   tv <- convTypeVal t
   when (tv /= VInt) $ throwError $ errMessage line MainWrongType
@@ -61,7 +61,7 @@ declareVar line id val = do
 declareFunc :: BNFC'Position -> Ident -> Func -> SAM FuncEnv
 declareFunc line id func = do
   (_, funcEnv, _, _) <- ask
-  if member id funcEnv then 
+  if member id funcEnv then
     throwError $ errMessage line (FunctionRedeclared id)
   else
     asks (Map.insert id func . snd4)
@@ -224,9 +224,9 @@ analyseExpr (EAdd line expr1 op expr2) = do
   case e of
     VInt    -> analyseValInTwoExpr line VInt expr1 expr2
     VString -> do
-      case op of 
+      case op of
         Plus _ -> analyseValInTwoExpr line VString expr1 expr2
-        _ -> throwError $ errMessage line InvalidStringOperator
+        _      -> throwError $ errMessage line InvalidStringOperator
     _       -> analyseValInTwoExpr line VInt expr1 expr2
   return e
 analyseExpr (EAnd line expr1 expr2) = do
@@ -237,7 +237,7 @@ analyseExpr (ERel line expr1 op expr2) = do
   case e of
     VInt  -> analyseValInTwoExpr line VInt expr1 expr2
     VBool -> analyseValInTwoExpr line VBool expr1 expr2
-    VString -> case op of 
+    VString -> case op of
                  Latte.Abs.EQU _ -> analyseValInTwoExpr line VString expr1 expr2
                  Latte.Abs.NE _ -> analyseValInTwoExpr line VString expr1 expr2
                  _ -> throwError $ errMessage line StringInvalidRel

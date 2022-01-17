@@ -18,7 +18,7 @@ int readInt() {
     size_t len = 0;
 
     if (getline(&str, &len, stdin) == -1) {
-        printf("readInt getline error\n");
+        printf("readInt error\n");
         exit(1);
     }
     sscanf(str, "%d", &n);
@@ -31,7 +31,7 @@ char* readString() {
     size_t len = 0;
 
     if (getline(&str, &len, stdin) == -1) {
-        printf("readString getline error\n");
+        printf("readString error\n");
         exit(1);
     }
     len = strlen(str);
@@ -41,7 +41,7 @@ char* readString() {
 }
 
 void error() {
-    printf("runtime error\n");
+    printf("error\n");
     exit(1);
 }
 

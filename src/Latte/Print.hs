@@ -1,6 +1,6 @@
-{-# LANGUAGE CPP #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE CPP                  #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE LambdaCase           #-}
 #if __GLASGOW_HASKELL__ <= 708
 {-# LANGUAGE OverlappingInstances #-}
 #endif
@@ -12,16 +12,12 @@
 
 module Latte.Print where
 
-import Prelude
-  ( ($), (.)
-  , Bool(..), (==), (<)
-  , Int, Integer, Double, (+), (-), (*)
-  , String, (++)
-  , ShowS, showChar, showString
-  , all, dropWhile, elem, foldr, id, map, null, replicate, shows, span
-  )
-import Data.Char ( Char, isSpace )
+import           Data.Char (Char, isSpace)
 import qualified Latte.Abs
+import           Prelude   (Bool (..), Double, Int, Integer, ShowS, String, all,
+                            dropWhile, elem, foldr, id, map, null, replicate,
+                            showChar, showString, shows, span, ($), (*), (+),
+                            (++), (-), (.), (<), (==))
 
 -- | The top-level printing method.
 
@@ -93,10 +89,10 @@ instance Print Char where
 mkEsc :: Char -> Char -> ShowS
 mkEsc q = \case
   s | s == q -> showChar '\\' . showChar s
-  '\\' -> showString "\\\\"
-  '\n' -> showString "\\n"
-  '\t' -> showString "\\t"
-  s -> showChar s
+  '\\'       -> showString "\\\\"
+  '\n'       -> showString "\\n"
+  '\t'       -> showString "\\t"
+  s          -> showChar s
 
 prPrec :: Int -> Int -> Doc -> Doc
 prPrec i j = if j < i then parenth else id
@@ -117,7 +113,7 @@ instance Print (Latte.Abs.Program' a) where
 instance Print (Latte.Abs.TopDef' a) where
   prt i = \case
     Latte.Abs.FnDef _ type_ id_ args block -> prPrec i 0 (concatD [prt 0 type_, prt 0 id_, doc (showString "("), prt 0 args, doc (showString ")"), prt 0 block])
-  prtList _ [x] = concatD [prt 0 x]
+  prtList _ [x]    = concatD [prt 0 x]
   prtList _ (x:xs) = concatD [prt 0 x, prt 0 xs]
 
 instance Print [Latte.Abs.TopDef' a] where
@@ -126,8 +122,8 @@ instance Print [Latte.Abs.TopDef' a] where
 instance Print (Latte.Abs.Arg' a) where
   prt i = \case
     Latte.Abs.Arg _ type_ id_ -> prPrec i 0 (concatD [prt 0 type_, prt 0 id_])
-  prtList _ [] = concatD []
-  prtList _ [x] = concatD [prt 0 x]
+  prtList _ []     = concatD []
+  prtList _ [x]    = concatD [prt 0 x]
   prtList _ (x:xs) = concatD [prt 0 x, doc (showString ","), prt 0 xs]
 
 instance Print [Latte.Abs.Arg' a] where
@@ -154,14 +150,14 @@ instance Print (Latte.Abs.Stmt' a) where
     Latte.Abs.CondElse _ expr stmt1 stmt2 -> prPrec i 0 (concatD [doc (showString "if"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 stmt1, doc (showString "else"), prt 0 stmt2])
     Latte.Abs.While _ expr stmt -> prPrec i 0 (concatD [doc (showString "while"), doc (showString "("), prt 0 expr, doc (showString ")"), prt 0 stmt])
     Latte.Abs.SExp _ expr -> prPrec i 0 (concatD [prt 0 expr, doc (showString ";")])
-  prtList _ [] = concatD []
+  prtList _ []     = concatD []
   prtList _ (x:xs) = concatD [prt 0 x, prt 0 xs]
 
 instance Print (Latte.Abs.Item' a) where
   prt i = \case
     Latte.Abs.NoInit _ id_ -> prPrec i 0 (concatD [prt 0 id_])
     Latte.Abs.Init _ id_ expr -> prPrec i 0 (concatD [prt 0 id_, doc (showString "="), prt 0 expr])
-  prtList _ [x] = concatD [prt 0 x]
+  prtList _ [x]    = concatD [prt 0 x]
   prtList _ (x:xs) = concatD [prt 0 x, doc (showString ","), prt 0 xs]
 
 instance Print [Latte.Abs.Item' a] where
@@ -174,8 +170,8 @@ instance Print (Latte.Abs.Type' a) where
     Latte.Abs.Bool _ -> prPrec i 0 (concatD [doc (showString "boolean")])
     Latte.Abs.Void _ -> prPrec i 0 (concatD [doc (showString "void")])
     Latte.Abs.Fun _ type_ types -> prPrec i 0 (concatD [prt 0 type_, doc (showString "("), prt 0 types, doc (showString ")")])
-  prtList _ [] = concatD []
-  prtList _ [x] = concatD [prt 0 x]
+  prtList _ []     = concatD []
+  prtList _ [x]    = concatD [prt 0 x]
   prtList _ (x:xs) = concatD [prt 0 x, doc (showString ","), prt 0 xs]
 
 instance Print [Latte.Abs.Type' a] where
@@ -196,8 +192,8 @@ instance Print (Latte.Abs.Expr' a) where
     Latte.Abs.ERel _ expr1 relop expr2 -> prPrec i 2 (concatD [prt 2 expr1, prt 0 relop, prt 3 expr2])
     Latte.Abs.EAnd _ expr1 expr2 -> prPrec i 1 (concatD [prt 2 expr1, doc (showString "&&"), prt 1 expr2])
     Latte.Abs.EOr _ expr1 expr2 -> prPrec i 0 (concatD [prt 1 expr1, doc (showString "||"), prt 0 expr2])
-  prtList _ [] = concatD []
-  prtList _ [x] = concatD [prt 0 x]
+  prtList _ []     = concatD []
+  prtList _ [x]    = concatD [prt 0 x]
   prtList _ (x:xs) = concatD [prt 0 x, doc (showString ","), prt 0 xs]
 
 instance Print [Latte.Abs.Expr' a] where
@@ -205,21 +201,21 @@ instance Print [Latte.Abs.Expr' a] where
 
 instance Print (Latte.Abs.AddOp' a) where
   prt i = \case
-    Latte.Abs.Plus _ -> prPrec i 0 (concatD [doc (showString "+")])
+    Latte.Abs.Plus _  -> prPrec i 0 (concatD [doc (showString "+")])
     Latte.Abs.Minus _ -> prPrec i 0 (concatD [doc (showString "-")])
 
 instance Print (Latte.Abs.MulOp' a) where
   prt i = \case
     Latte.Abs.Times _ -> prPrec i 0 (concatD [doc (showString "*")])
-    Latte.Abs.Div _ -> prPrec i 0 (concatD [doc (showString "/")])
-    Latte.Abs.Mod _ -> prPrec i 0 (concatD [doc (showString "%")])
+    Latte.Abs.Div _   -> prPrec i 0 (concatD [doc (showString "/")])
+    Latte.Abs.Mod _   -> prPrec i 0 (concatD [doc (showString "%")])
 
 instance Print (Latte.Abs.RelOp' a) where
   prt i = \case
     Latte.Abs.LTH _ -> prPrec i 0 (concatD [doc (showString "<")])
-    Latte.Abs.LE _ -> prPrec i 0 (concatD [doc (showString "<=")])
+    Latte.Abs.LE _  -> prPrec i 0 (concatD [doc (showString "<=")])
     Latte.Abs.GTH _ -> prPrec i 0 (concatD [doc (showString ">")])
-    Latte.Abs.GE _ -> prPrec i 0 (concatD [doc (showString ">=")])
+    Latte.Abs.GE _  -> prPrec i 0 (concatD [doc (showString ">=")])
     Latte.Abs.EQU _ -> prPrec i 0 (concatD [doc (showString "==")])
-    Latte.Abs.NE _ -> prPrec i 0 (concatD [doc (showString "!=")])
+    Latte.Abs.NE _  -> prPrec i 0 (concatD [doc (showString "!=")])
 

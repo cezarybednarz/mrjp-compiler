@@ -1,12 +1,12 @@
 module Backend.Environment where
 
-import Control.Monad.State
-import Control.Monad.Reader
-import Control.Monad.Except
-import Data.Maybe
-import Data.Map as Map
-import Backend.LLVM as LLVM
-import Latte.Abs as Latte
+import           Backend.LLVM         as LLVM
+import           Control.Monad.Except
+import           Control.Monad.Reader
+import           Control.Monad.State
+import           Data.Map             as Map
+import           Data.Maybe
+import           Latte.Abs            as Latte
 
 -- environment --
 type Scope = Int
@@ -16,18 +16,18 @@ type FnRetReg = Reg
 
 -- environment monad --
 data Env = Env {eValEnv :: ValEnv,
-            eScope :: Scope }
+            eScope      :: Scope }
   deriving (Show)
 
--- compiler state monad -- 
-type Functions = [Fn] 
+-- compiler state monad --
+type Functions = [Fn]
 type StrConstants = [StrConstant]
 type FunctionTypes = Map.Map String (LLVM.Type, [LLVM.Type])
 
-data CompilerState = CompilerState { sStrConstants :: StrConstants,
-                                     sFunctions :: Functions, 
-                                     sCurrReg :: Reg ,
-                                     sCurrLabel :: Label,
+data CompilerState = CompilerState { sStrConstants  :: StrConstants,
+                                     sFunctions     :: Functions,
+                                     sCurrReg       :: Reg ,
+                                     sCurrLabel     :: Label,
                                      sFunctionTypes :: FunctionTypes}
   deriving (Show)
 
@@ -53,7 +53,7 @@ initEnv :: Env
 initEnv = Env {
   eValEnv = Map.empty,
   eScope = 0}
-    
+
 -- ! debug functions
 
 debugEnv :: CM ()

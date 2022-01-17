@@ -12,10 +12,10 @@ target triple = "x86_64-pc-linux-gnu"
 @.str.1 = private unnamed_addr constant [2 x i8] c"\0A\00", align 1
 @.str.2 = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
 @stdin = external global %struct._IO_FILE*, align 8
-@.str.3 = private unnamed_addr constant [23 x i8] c"readInt getline error\0A\00", align 1
+@.str.3 = private unnamed_addr constant [15 x i8] c"readInt error\0A\00", align 1
 @.str.4 = private unnamed_addr constant [3 x i8] c"%d\00", align 1
-@.str.5 = private unnamed_addr constant [26 x i8] c"readString getline error\0A\00", align 1
-@.str.6 = private unnamed_addr constant [15 x i8] c"runtime error\0A\00", align 1
+@.str.5 = private unnamed_addr constant [18 x i8] c"readString error\0A\00", align 1
+@.str.6 = private unnamed_addr constant [7 x i8] c"error\0A\00", align 1
 
 ; Function Attrs: noinline nounwind optnone sspstrong uwtable
 define dso_local void @printInt(i32 %0) #0 {
@@ -62,7 +62,7 @@ define dso_local i32 @readInt() #0 {
   br i1 %6, label %7, label %9
 
 7:                                                ; preds = %0
-  %8 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str.3, i64 0, i64 0))
+  %8 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str.3, i64 0, i64 0))
   call void @exit(i32 1) #6
   unreachable
 
@@ -93,7 +93,7 @@ define dso_local i8* @readString() #0 {
   br i1 %5, label %6, label %8
 
 6:                                                ; preds = %0
-  %7 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([26 x i8], [26 x i8]* @.str.5, i64 0, i64 0))
+  %7 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([18 x i8], [18 x i8]* @.str.5, i64 0, i64 0))
   call void @exit(i32 1) #6
   unreachable
 
@@ -128,7 +128,7 @@ declare i64 @strlen(i8*) #4
 
 ; Function Attrs: noinline nounwind optnone sspstrong uwtable
 define dso_local void @error() #0 {
-  %1 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str.6, i64 0, i64 0))
+  %1 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.6, i64 0, i64 0))
   call void @exit(i32 1) #6
   unreachable
 }
