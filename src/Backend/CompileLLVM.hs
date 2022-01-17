@@ -15,10 +15,9 @@ runMain :: Program -> CM String
 runMain (Program line tds) = do
   emitStrConst ""
   addFnTypesToState (tds ++ libraryFunctions line)
-  state <- get
   env <- compileTopDefs tds
   state <- get
-  let strConstants = [] -- todo przeparsować values mapy
+  let strConstants = sStrConstants state
   let functions = sFunctions state
   return $ unlines $ printLLVMProgram strConstants functions
 
@@ -132,8 +131,8 @@ emitArgsDecl reg ((t, strId):args) = do
 emitStrConst :: String -> CM (Int, Int)
 emitStrConst str = do
   state <- get
-  let l = length str
-  let id = length (sStrConstants state) 
+  let l = length str + 1
+  let id = length (sStrConstants state)
   let strConst = StrConstant id l str
   put $ state { sStrConstants = strConst:sStrConstants state}
   return (id, l)
@@ -191,7 +190,8 @@ emitDeclItem t (NoInit line id) = do
       emitStmt $ Store Ti32 (VConst 0) (Ptr Ti32) reg
     Bool _ -> do
       emitStmt $ Store Ti1 (VConst 0) (Ptr Ti1) reg
-    -- todo moze sie zbuguje przy stringu
+    Str _ -> do
+      emitStmt $ Store (Ptr Ti8) (VGetElementPtr 0 1 "") (Ptr (Ptr Ti8)) reg
   newValEnv <- declareVarInEnv llvmtype id reg
   return $ env { eValEnv = newValEnv }
 emitDeclItem t (Init line id e) = do
@@ -227,9 +227,9 @@ convArgTofArg (Arg _ t id) = do
   return (llvmtype, ident)
 
 convRelOpCond :: RelOp -> Cond
-convRelOpCond relOp = 
+convRelOpCond relOp =
   case relOp of
-    LTH _ -> RelSLT 
+    LTH _ -> RelSLT
     LE _ -> RelSLE
     GTH _ -> RelSGT
     GE _ -> RelSGE
@@ -323,12 +323,17 @@ compileExpr (EMul _ expr1 op expr2) = do
 compileExpr (EAdd _ expr1 op expr2) = do
   (t1, e1) <- compileExpr expr1
   (t2, e2) <- compileExpr expr2
-  -- todo dodawanie stringow (case na typ Val e1, czy ptr czy nie)
-  reg <- newRegister
-  case op of
-    (Plus _) -> emitStmt $ Arithm reg Ti32 e1 e2 Add
-    (Minus _) -> emitStmt $ Arithm reg Ti32 e1 e2 Sub
-  return (Ti32, VReg reg)
+  case t1 of
+    Ti32 -> do
+      reg <- newRegister
+      case op of
+        (Plus _) -> emitStmt $ Arithm reg Ti32 e1 e2 Add
+        (Minus _) -> emitStmt $ Arithm reg Ti32 e1 e2 Sub
+      return (Ti32, VReg reg)
+    _ -> do
+      reg <- newRegister
+      emitStmt $ Call reg (Ptr Ti8) "concatStrings" [(t1, e1), (t2, e2)]
+      return (Ptr Ti8, VReg reg)
 compileExpr (EAnd l expr1 expr2) = do
   compileExpr $ Not l (EOr l (Not l expr1) (Not l expr2))
 compileExpr (EOr _ expr1 expr2) = do
@@ -347,14 +352,22 @@ compileExpr (EOr _ expr1 expr2) = do
   return (Ti1, VReg reg)
 compileExpr (ERel _ expr1 op expr2) = do
   let cond = convRelOpCond op
-  -- todo bool 
-  -- todo string
-  (t1, e1) <- compileExpr expr1 
-  (t2, e2) <- compileExpr expr2 
+  (t1, e1) <- compileExpr expr1
+  (t2, e2) <- compileExpr expr2
   reg <- newRegister
-  emitStmt $ Cmp reg cond Ti32 e1 e2
-  return (Ti1, VReg reg)
-
+  case t1 of
+    Ti1 -> do
+      emitStmt $ Cmp reg cond Ti1 e1 e2
+      return (Ti1, VReg reg)
+    Ti32 -> do
+      emitStmt $ Cmp reg cond Ti32 e1 e2
+      return (Ti1, VReg reg)
+    (Ptr Ti8) -> do
+      case cond of
+        RelEQ -> emitStmt $ Call reg (Ptr Ti8) "equStrings" [(Ptr Ti8, e1), (Ptr Ti8, e2)]
+        RelNE -> emitStmt $ Call reg (Ptr Ti8) "neStrings" [(Ptr Ti8, e1), (Ptr Ti8, e2)]
+      return (Ptr Ti8, VReg reg)
+      
 -- compile stmts helpers --
 compileBlock :: Stmt -> CM (RetInfo, Env)
 compileBlock block = do
@@ -451,8 +464,8 @@ compileStmt (Cond _ expr block) = do
       return (ReturnNothing, env)
 compileStmt (CondElse _ expr block1 block2) = do
   env <- ask
-  case expr of 
-    ELitTrue _ -> do 
+  case expr of
+    ELitTrue _ -> do
       (retVal, _) <- local (const env) $ compileBlock block1
       return (retVal, env)
     ELitFalse _ -> do
@@ -485,10 +498,10 @@ compileStmt (While _ expr block) = do
   lStart2 <- getLabel
   lBlock <- newLabel
   emitNewBlock lBlock
-  local (const env) $ compileBlock block 
+  local (const env) $ compileBlock block
   emitStmt $ Br lStart
   lEnd <- newLabel
   emitNewBlock lEnd
   emitStmtForLabel (Br lStart) lStart0
   emitStmtForLabel (BrCond Ti1 e lBlock lEnd) lStart2
-  return (ReturnNothing, env) 
+  return (ReturnNothing, env)

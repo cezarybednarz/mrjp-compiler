@@ -1,9 +1,6 @@
 
 int main() {
-  int count = 10;
-  while (count > 0) {
-    printInt(count);
-    count--;
-  }
+  string s = "hello";
+  printString(s);
   return 0;
 }

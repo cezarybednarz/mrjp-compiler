@@ -8,8 +8,7 @@ data Val = VConst Integer
          | VFalse
   deriving (Eq, Ord)
 
-data Reg = Reg Integer
-         | StrReg Integer
+newtype Reg = Reg Integer
   deriving (Eq, Ord)
 
 newtype Label = Label Integer
@@ -65,7 +64,7 @@ data ArithmOp = Add
               | Rem
   deriving (Eq, Ord)
 
-data StrConstant = StrConstant Int Int String
+data StrConstant = StrConstant Int Int String -- id length value
   deriving (Eq, Ord, Show)
 
 -- show for llvm types --
@@ -87,12 +86,13 @@ instance Show ArithmOp where
 
 instance Show Reg where
   show (Reg i) = "%" ++ show i
-  -- show (RArg String) = 
 
 instance Show Val where
   show (VConst i) = show i
   show (VReg reg) = show reg
-  -- show (VGetElementPtr Int String) =
+  show (VGetElementPtr id len str) =
+    "getelementptr inbounds ([" ++ show len ++ " x i8], ["
+    ++ show len ++ " x i8]* @.str." ++ show id ++ ", i32 0, i32 0)"
   show VTrue = "true"
   show VFalse = "false"
 
@@ -100,11 +100,11 @@ instance Show Label where
   show (Label l) = show l
 
 showLabel :: Label -> String
-showLabel label = 
+showLabel label =
   show label ++ ":"
 
 showLabelReg :: Label -> String
-showLabelReg label = 
+showLabelReg label =
   "%" ++ show label
 
 instance Show Type where
@@ -125,7 +125,7 @@ instance Show LLVMStmt where
   show (Arithm reg t v1 v2 op) = show reg ++ " = " ++ show op ++ " "
     ++ show t ++ " " ++ show v1 ++ ", " ++ show v2
   show (Br label) = "br label " ++ showLabelReg label
-  show (BrCond t val l1 l2) = "br " ++ show t ++ " " ++ show val 
+  show (BrCond t val l1 l2) = "br " ++ show t ++ " " ++ show val
     ++ ", label " ++ showLabelReg l1 ++ ", label " ++ showLabelReg l2
   show (Load r1 t1 t2 r2) = show r1 ++ " = load " ++ show t1 ++ ", "
     ++ show t2 ++ " " ++ show r2
@@ -136,18 +136,14 @@ instance Show LLVMStmt where
     ++ show v1 ++ ", " ++ show v2
   show (Cmp reg cond t v1 v2) = show reg ++ " = icmp " ++ show cond
     ++ " " ++ show t ++ " " ++ show v1 ++ ", " ++ show v2
-  -- show (Unreachable) = 
-  -- show (GetElementPtr Reg Type Type Val Type Val) = 
-  -- show (Bitcast Reg Type Val Type) = 
-  -- show (Sext Reg Type Val Type) = 
-  show (Phi reg t phiArgs) = show reg ++ " = phi " ++ show t 
+  show (Phi reg t phiArgs) = show reg ++ " = phi " ++ show t
     ++ " " ++ printPhiArgs True phiArgs
 
 -- print llvm code from in-memory structures -- 
 
 printPhiArgs :: Bool -> [(Val, Label)] -> String
 printPhiArgs _ [] = []
-printPhiArgs first ((v, l):args) = 
+printPhiArgs first ((v, l):args) =
   (if first then "" else ", ")
   ++
   "[ " ++ show v ++ ", " ++ showLabelReg l ++ " ]"
@@ -168,9 +164,25 @@ printArgsWithVals first ((t, val):args) =
 printStmt :: LLVMStmt -> String
 printStmt stmt = "  " ++ show stmt
 
+-- conversion to printable string --
+convertStr :: String -> String 
+convertStr "" = ""
+convertStr (c:str) = 
+  case c of
+    '\n' -> "\\" ++ "0A"
+    '\\' -> "\\" ++ "%C"
+    '\t' -> "\\" ++ "09"
+    '"' -> "\\" ++ "22"
+    cc -> [cc]
+  ++
+  convertStr str
+
 printStrConstants :: [StrConstant] -> [String]
-printStrConstants strContants = []
-  -- todo
+printStrConstants [] = []
+printStrConstants ((StrConstant id len str):strConstants) =
+  ("@.str." ++ show id ++ " = private unnamed_addr constant ["
+  ++ show len ++ " x i8] c\"" ++ convertStr str ++ "\\00\", align 1") 
+  : printStrConstants strConstants
 
 printLLBlocks :: Bool -> [LLBlock] -> [String]
 printLLBlocks _ [] = []
