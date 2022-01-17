@@ -34,5 +34,6 @@ define i32 @main() {
   ret i32 0
   br label %15
 15:
+  ret i32 0
 }
 

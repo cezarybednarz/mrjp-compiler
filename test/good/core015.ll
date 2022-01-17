@@ -39,5 +39,6 @@ define i32 @ev(i32 %0) {
 17:
   br label %18
 18:
+  ret i32 0
 }
 

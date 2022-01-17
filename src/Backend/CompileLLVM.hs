@@ -58,6 +58,14 @@ getIdentTypeReg id = do
   let Just (t, reg, _) = Map.lookup id valEnv
   return (t, reg)
 
+getLastBlock :: CM LLBlock
+getLastBlock = do
+  state <- get
+  label <- getLabel
+  let f:functions = sFunctions state
+  let (Just b) = Map.lookup label (fBlocks f)
+  return b
+
 getCurrFnType :: CM LLVM.Type
 getCurrFnType = do
   state <- get
@@ -267,6 +275,17 @@ compileTopDef (FnDef line t id args b) = do
   fnType <- getCurrFnType
   when (fnType == Tvoid && retInfo == ReturnNothing) $ do
     emitStmt RetVoid
+  lastBlock <- getLastBlock
+  when (Prelude.null (bStmts lastBlock)) $ do
+    case llvmtype of
+      Tvoid -> do
+        emitStmt RetVoid
+      Ti32 -> do
+        emitStmt $ LLVM.Ret Ti32 (VConst 0)
+      Ti1 -> do
+        emitStmt $ LLVM.Ret Ti1 VFalse
+      (Ptr Ti8) -> do
+        emitStmt $ LLVM.Ret (Ptr Ti8) (VGetElementPtr 0 1 "")
 
 -- compile list of expressions to val --
 compileExprList :: [Expr] -> CM [Val]
