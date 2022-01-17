@@ -215,6 +215,17 @@ convArgTofArg (Arg _ t id) = do
   llvmtype <- convTypeLLVMType t
   return (llvmtype, ident)
 
+convRelOpCond :: RelOp -> Cond
+convRelOpCond relOp = 
+  case relOp of
+    LTH _ -> RelSLT 
+    LE _ -> RelSLE
+    GTH _ -> RelSGT
+    GE _ -> RelSGE
+    EQU _ -> RelEQ
+    NE _ -> RelNE
+
+
 -- add function types to compiler state --
 addFnTypesToState :: [TopDef] -> CM ()
 addFnTypesToState [] = return ()
@@ -322,10 +333,15 @@ compileExpr (EOr _ expr1 expr2) = do
   reg <- newRegister
   emitStmt $ Phi reg Ti1 [(VTrue, lStart), (e2, lFalse2)]
   return (VReg reg)
-compileExpr (ERel _ expr1 op expr2) = return VNull -- todo
-
-
--- todo reszta compileExpr
+compileExpr (ERel _ expr1 op expr2) = do
+  let cond = convRelOpCond op
+  -- todo bool 
+  -- todo string
+  e1 <- compileExpr expr1 
+  e2 <- compileExpr expr2 
+  reg <- newRegister
+  emitStmt $ Cmp reg cond Ti32 e1 e2
+  return (VReg reg)
 
 -- compile stmts helpers --
 compileBlock :: Stmt -> CM (RetInfo, Env)
@@ -450,7 +466,9 @@ compileStmt (CondElse _ expr block1 block2) = do
   return (ReturnNothing, env)
 compileStmt (While _ expr block) = do
   env <- ask
-  lStart <- getLabel
+  lStart0 <- getLabel
+  lStart <- newLabel
+  emitNewBlock lStart
   e <- compileExpr expr
   lStart2 <- getLabel
   lBlock <- newLabel
@@ -459,5 +477,7 @@ compileStmt (While _ expr block) = do
   emitStmt $ Br lStart
   lEnd <- newLabel
   emitNewBlock lEnd
+  emitStmtForLabel (Br lStart) lStart0
   emitStmtForLabel (BrCond Ti1 e lBlock lEnd) lStart2
+
   return (ReturnNothing, env) 

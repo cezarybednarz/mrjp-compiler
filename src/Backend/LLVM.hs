@@ -62,7 +62,7 @@ data Cond = RelEQ
           | RelSGE
           | RelSLT
           | RelSLE
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Ord)
 
 data ArithmOp = Add
               | Sub
@@ -75,6 +75,15 @@ data StrConstant = StrConstant Int String String
   deriving (Eq, Ord, Show)
 
 -- show for llvm types --
+
+instance Show Cond where
+  show RelEQ = "eq"
+  show RelNE = "ne"
+  show RelSGT = "sgt"
+  show RelSGE = "sge"
+  show RelSLT = "slt"
+  show RelSLE = "sle"
+
 instance Show ArithmOp where
   show Add = "add"
   show Sub = "sub"
@@ -133,7 +142,8 @@ instance Show LLVMStmt where
   show (Alloca reg t) = show reg ++ " = alloca " ++ show t
   show (Xor reg t v1 v2) = show reg ++ " = xor " ++ show t ++ " "
     ++ show v1 ++ ", " ++ show v2
-  -- show (Cmp Reg Cond Type Val Val) = 
+  show (Cmp reg cond t v1 v2) = show reg ++ " = icmp " ++ show cond
+    ++ " " ++ show t ++ " " ++ show v1 ++ ", " ++ show v2
   -- show (Unreachable) = 
   -- show (GetElementPtr Reg Type Type Val Type Val) = 
   -- show (Bitcast Reg Type Val Type) = 
