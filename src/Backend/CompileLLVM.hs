@@ -442,8 +442,10 @@ compileStmt :: Stmt -> CM (RetInfo, Env)
 compileStmt (Empty _) = do
   env <- ask
   return (ReturnNothing, env)
-compileStmt (BStmt line (Block line2 b)) =
-  compileBlock (BStmt line (Block line2 b))
+compileStmt (BStmt line (Block line2 b)) = do
+  env <- ask
+  (retInfo, _) <- compileBlock (BStmt line (Block line2 b))
+  return (retInfo, env)
 compileStmt (Decl line t items) = do
   env <- compileDecl t items
   return (ReturnNothing, env)

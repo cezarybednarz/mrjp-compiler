@@ -1,6 +1,6 @@
 #!/bin/bash
 
-for f in ./test/good/*.lat; do 
+for f in ./test/good2/*.lat; do 
 	echo "--" $f "--"
   DIRNAME=`dirname $f`
   BASENAME=`basename $f .lat`
@@ -18,7 +18,7 @@ echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 echo
 
-for f in ./test/bad/*.lat; do 
+for f in ./test/bad2/*.lat; do 
 	echo "--" $f "--"
   cabal run compiler -- "$f" 
 done;
