@@ -97,7 +97,7 @@ instance Show Val where
   show VFalse = "false"
 
 instance Show Label where
-  show (Label l) = show l
+  show (Label l) =  show l
 
 showLabel :: Label -> String
 showLabel label =

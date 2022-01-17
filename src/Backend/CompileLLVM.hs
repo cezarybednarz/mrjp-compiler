@@ -149,7 +149,8 @@ emitFunction label t name args = do
     fBlocks = Map.empty
   }
   put $ state {
-    sFunctions = function:functions
+    sFunctions = function:functions,
+    sCurrReg = Reg 0
   }
   emitNewBlock label
   setRegister $ Reg (toInteger $ length args + 1)
@@ -259,11 +260,13 @@ compileTopDef (FnDef line t id args b) = do
   fArgs <- mapM convArgTofArg args
   ident <- convIdentString id
   llvmtype <- convTypeLLVMType t
+  setRegister (Reg 0)
   label <- newLabel
   env <- emitFunction label llvmtype ident fArgs
   (retInfo, _) <- local (const env) $ compileBlock (BStmt line b)
   fnType <- getCurrFnType
-  when (fnType == Tvoid && retInfo == ReturnNothing) $ emitStmt RetVoid
+  when (fnType == Tvoid && retInfo == ReturnNothing) $ do
+    emitStmt RetVoid
 
 -- compile list of expressions to val --
 compileExprList :: [Expr] -> CM [Val]
@@ -369,7 +372,7 @@ compileExpr (ERel _ expr1 op expr2) = do
       reg2 <- newRegister
       emitStmt $ Cmp reg2 RelEQ Ti32 (VConst 1) (VReg reg)
       return (Ptr Ti8, VReg reg2)
-      
+
 -- compile stmts helpers --
 compileBlock :: Stmt -> CM (RetInfo, Env)
 compileBlock block = do
@@ -390,8 +393,10 @@ compileBlockStmts (s:ss) = do
     (Return (t, val), _) -> do
       case t of
         LLVM.Tvoid -> do
+          newRegister
           emitStmt LLVM.RetVoid
-        _ ->
+        _ -> do
+          newRegister
           emitStmt $ LLVM.Ret t val
       return ret
     (ReturnNothing, env) -> do
@@ -438,7 +443,6 @@ compileStmt (Latte.Ret _ expr) = do
   return (Return (t, val), env)
 compileStmt (VRet _) = do
   env <- ask
-  emitStmt RetVoid
   return (Return (Tvoid, VConst 0), env)
 compileStmt (SExp _ expr) = do
   env <- ask

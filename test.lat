@@ -1,11 +1,14 @@
+/* Test arithmetic and comparisons. */
 
 int main() {
-  string hello = "hello";
-  string space = "" + " ";
-  string wor = "wor";
-  string ld = "ld";
-  if ("hello world" == hello + space + wor + ld) {
-    printString("OK");
-  }
+  f();
   return 0;
+}
+
+void f() {
+  if (true || true) {
+    printString("true");
+    return;
+  } 
+  return;
 }

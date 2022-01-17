@@ -2,7 +2,15 @@
 
 for f in ./test/good/*.lat; do 
 	echo "--" $f "--"
-  cabal run compiler -- "$f" 
+  DIRNAME=`dirname $f`
+  BASENAME=`basename $f .lat`
+  OUTPUT="$DIRNAME/${BASENAME}.output"
+  BCFILE="$DIRNAME/${BASENAME}.bc"
+  ./latc_llvm "$f" 
+  lli $BCFILE > moje.out
+  diff moje.out $OUTPUT
+  echo 
+  echo 
 done;
 
 echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
