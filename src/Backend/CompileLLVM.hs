@@ -450,4 +450,14 @@ compileStmt (CondElse _ expr block1 block2) = do
   return (ReturnNothing, env)
 compileStmt (While _ expr block) = do
   env <- ask
-  return (ReturnNothing, env) -- todo
+  lStart <- getLabel
+  e <- compileExpr expr
+  lStart2 <- getLabel
+  lBlock <- newLabel
+  emitNewBlock lBlock
+  local (const env) $ compileBlock block 
+  emitStmt $ Br lStart
+  lEnd <- newLabel
+  emitNewBlock lEnd
+  emitStmtForLabel (BrCond Ti1 e lBlock lEnd) lStart2
+  return (ReturnNothing, env) 

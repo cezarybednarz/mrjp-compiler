@@ -17,5 +17,10 @@ int main() {
   }
   printInt(i);
   
+  int count = 10;
+  while ((count > 0) && (false || true || false || true) && (true)) {
+    printInt(count);
+    count--;
+  }
   return 0;
 }
