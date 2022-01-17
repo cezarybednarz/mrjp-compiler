@@ -33,10 +33,9 @@ newRegister = do
 
 newLabel :: CM Label
 newLabel = do
-  state <- get
-  let (Label label) = sCurrLabel state
-  put $ state { sCurrLabel = Label (label + 1)}
-  return $ Label label
+  (Reg reg) <- newRegister
+  setLabel (Label reg)
+  return $ Label reg
 
 setRegister :: Reg -> CM ()
 setRegister reg = do
@@ -87,15 +86,25 @@ getScope id = do
   let Just (_, _, scope) = Map.lookup id valEnv
   return scope
 
+getLabel :: CM Label
+getLabel = do
+  gets sCurrLabel
+
 -- emit instruction to current block in current function -- 
 emitStmt :: LLVMStmt -> CM ()
 emitStmt llvmstmt = do
+  label <- getLabel
+  emitStmtForLabel llvmstmt label
+  return ()
+
+emitStmtForLabel :: LLVMStmt -> Label -> CM ()
+emitStmtForLabel llvmstmt label = do
   state <- get
   let f:functions = sFunctions state
-  let b:blocks = fBlocks f
+  let (Just b) = Map.lookup label (fBlocks f)
   let llvmstmts = bStmts b
   let block = b { bStmts = llvmstmt:llvmstmts }
-  let function = f { fBlocks = block:blocks }
+  let function = f { fBlocks = Map.insert label block (fBlocks f)  }
   put $ state { sFunctions = function:functions }
   return ()
 
@@ -119,20 +128,19 @@ emitArgsDecl reg ((t, strId):args) = do
   local (const (env {eValEnv = newValEnv})) $ emitArgsDecl (Reg (r + 1)) args
 
 -- add function to compiler state --
-emitFunction :: LLVM.Type -> String -> [(LLVM.Type, String)] -> CM Env
-emitFunction t name args = do
+emitFunction :: Label -> LLVM.Type -> String -> [(LLVM.Type, String)] -> CM Env
+emitFunction label t name args = do
   state <- get
   let functions = sFunctions state
   let function = Fn {
     fType = t,
     fName = name,
     fArgs = args,
-    fBlocks = []
+    fBlocks = Map.empty
   }
   put $ state {
     sFunctions = function:functions
   }
-  label <- newLabel
   emitNewBlock label
   setRegister $ Reg (toInteger $ length args + 1)
   emitArgsDecl (Reg 0) args
@@ -147,7 +155,7 @@ emitNewBlock label = do
     bLabel = label,
     bStmts = []
   }
-  let function = f { fBlocks = block:blocks }
+  let function = f { fBlocks = Map.insert label block blocks }
   put $ state { sFunctions = function:functions }
   return ()
 
@@ -159,7 +167,6 @@ declareVarInEnv t id reg = do
   let scope = eScope env
   let newValEnv = Map.insert id (t, reg, scope) valEnv
   return newValEnv
-
 
 -- emit declaration of item --
 emitDeclItem :: Latte.Type -> Item -> CM Env
@@ -217,8 +224,8 @@ addFnTypesToState ((FnDef line t id args b):fns) = do
   let (Ident name) = id
   state <- get
   let functionTypes = sFunctionTypes state
-  put $ state { 
-    sFunctionTypes = Map.insert name (llvmtype, Prelude.map fst fArgs) functionTypes 
+  put $ state {
+    sFunctionTypes = Map.insert name (llvmtype, Prelude.map fst fArgs) functionTypes
   }
   addFnTypesToState fns
 
@@ -231,7 +238,8 @@ compileTopDef (FnDef line t id args b) = do
   fArgs <- mapM convArgTofArg args
   ident <- convIdentString id
   llvmtype <- convTypeLLVMType t
-  env <- emitFunction llvmtype ident fArgs
+  label <- newLabel
+  env <- emitFunction label llvmtype ident fArgs
   (retInfo, _) <- local (const env) $ compileBlock (BStmt line b)
   fnType <- getCurrFnType
   when (fnType == Tvoid && retInfo == ReturnNothing) $ emitStmt RetVoid
@@ -246,7 +254,7 @@ compileExprList (expr:exprs) = do
 
 -- compile exprs -- 
 -- always returns value or register which isn't a pointer --
-compileExpr :: Expr -> CM Val 
+compileExpr :: Expr -> CM Val
 compileExpr (EVar _ id) = do
   (t, reg) <- getIdentTypeReg id
   reg2 <- emitLoad t reg
@@ -284,7 +292,7 @@ compileExpr (EMul _ expr1 op expr2) = do
   e1 <- compileExpr expr1
   e2 <- compileExpr expr2
   reg <- newRegister
-  case op of 
+  case op of
     (Times _) -> emitStmt $ Arithm reg Ti32 e1 e2 Mul
     (Latte.Div _) -> emitStmt $ Arithm reg Ti32 e1 e2 LLVM.Div
     (Mod _) -> emitStmt $ Arithm reg Ti32 e1 e2 Rem
@@ -294,12 +302,24 @@ compileExpr (EAdd _ expr1 op expr2) = do
   e2 <- compileExpr expr2
   -- todo dodawanie stringow (case na typ Val e1, czy ptr czy nie)
   reg <- newRegister
-  case op of 
+  case op of
     (Plus _) -> emitStmt $ Arithm reg Ti32 e1 e2 Add
     (Minus _) -> emitStmt $ Arithm reg Ti32 e1 e2 Sub
   return (VReg reg)
 compileExpr (EAnd _ expr1 expr2) = return VNull -- todo
-compileExpr (EOr _ expr1 epxr2) = return VNull -- todo
+compileExpr (EOr _ expr1 expr2) = do
+  lStart <- getLabel
+  e1 <- compileExpr expr1
+  lFalse <- newLabel
+  emitNewBlock lFalse
+  e2 <- compileExpr expr2
+  lTrue <- newLabel
+  emitStmtForLabel  (Br lTrue) lFalse
+  emitNewBlock lTrue
+  emitStmtForLabel (BrCond Ti1 e1 lTrue lFalse) lStart
+  reg <- newRegister
+  emitStmt $ Phi reg Ti1 [(VTrue, lStart), (e2, lFalse)]
+  return (VReg reg)
 compileExpr (ERel _ expr1 op expr2) = return VNull -- todo
 
 
@@ -379,9 +399,12 @@ compileStmt (SExp _ expr) = do
   env <- ask
   compileExpr expr
   return (ReturnNothing, env)
-
-
-compileStmt stmt =
-  throwError $ show stmt
-
--- todo reszta compileStmt
+compileStmt (Cond _ expr block) = do
+  env <- ask
+  return (ReturnNothing, env) -- todo
+compileStmt (CondElse _ expr block1 block2) = do
+  env <- ask
+  return (ReturnNothing, env) -- todo
+compileStmt (While _ expr block) = do
+  env <- ask
+  return (ReturnNothing, env) -- todo

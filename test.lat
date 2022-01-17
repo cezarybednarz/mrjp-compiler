@@ -1,22 +1,7 @@
 
-int sub(int a, int b) {
-  return a - b + (a - a) + (b - b) + a + (-a);
-}
-
-void p(int a, int b, boolean c) {
-  printInt(a + b);
-}
-
 int main() {
-  int x = 4;
-  int y = 3;
-  x = y + (-y) + x;
-  x = (x * x) / x;
-  x++;
-  x--;
-  y++;
-  y--;
-  p(x - y, x - x, true);
-  printInt(sub(x, y) + (1000 % 10));
+  boolean a = true;
+  boolean b = false;
+  boolean c = a || b;
   return 0;
 }

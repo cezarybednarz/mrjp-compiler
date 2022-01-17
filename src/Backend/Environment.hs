@@ -26,8 +26,8 @@ type FunctionTypes = Map.Map String (LLVM.Type, [LLVM.Type])
 
 data CompilerState = CompilerState { sStrConstants :: StrConstants,
                                      sFunctions :: Functions, 
-                                     sCurrLabel :: Label, 
                                      sCurrReg :: Reg ,
+                                     sCurrLabel :: Label,
                                      sFunctionTypes :: FunctionTypes}
   deriving (Show)
 
@@ -44,8 +44,8 @@ initCompilerState :: CompilerState
 initCompilerState = CompilerState {
   sStrConstants = Map.empty,
   sFunctions = [],
+  sCurrReg = Reg 0,
   sCurrLabel = Label 0,
-  sCurrReg = Reg 0 ,
   sFunctionTypes = Map.empty
   }
 

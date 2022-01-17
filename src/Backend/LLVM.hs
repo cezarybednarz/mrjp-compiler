@@ -1,4 +1,5 @@
 module Backend.LLVM where
+import           Data.Map             as Map
 
 data Val = VConst Integer
          | VReg Reg
@@ -37,11 +38,11 @@ data LLVMStmt = Call Reg Type String [(Type, Val)]
               | Alloca Reg Type
               | Cmp Reg Cond Type Val Val
               | Xor Reg Type Val Val
-              -- todo phi 
               | Unreachable
               | GetElementPtr Reg Type Type Val Type Val
               | Bitcast Reg Type Val Type
               | Sext Reg Type Val Type
+              | Phi Reg Type [(Val, Label)]
   deriving (Eq, Ord)
 
 data LLBlock = LLBlock { bLabel :: Label,
@@ -52,7 +53,7 @@ data LLBlock = LLBlock { bLabel :: Label,
 data Fn = Fn { fType :: Type,
                fName :: String,
                fArgs :: [(Type, String)],
-               fBlocks :: [LLBlock] }
+               fBlocks :: Map.Map Label LLBlock }
   deriving (Eq, Ord, Show)
 
 data Cond = RelEQ
@@ -82,10 +83,10 @@ instance Show ArithmOp where
   show Rem = "srem"
 
 instance Show Reg where
-  show (Reg i) = "%" ++ show i 
+  show (Reg i) = "%" ++ show i
   -- show (RArg String) = 
 
-instance Show Val where 
+instance Show Val where
   show (VConst i) = show i
   show (VReg reg) = show reg
   -- show (VGetElementPtr Int String) =
@@ -95,7 +96,15 @@ instance Show Val where
   -- show VNull = 
 
 instance Show Label where
-  show (Label l) = "L" ++ show l ++ ":"
+  show (Label l) = show l
+
+showLabel :: Label -> String
+showLabel label = 
+  show label ++ ":"
+
+showLabelReg :: Label -> String
+showLabelReg label = 
+  "%" ++ show label
 
 instance Show Type where
   show Ti64 = "i64"
@@ -112,11 +121,12 @@ instance Show LLVMStmt where
     ++ name ++ "(" ++ printArgsWithVals True args ++ ")"
   show RetVoid = "ret void"
   show (Ret t val) = "ret " ++ show t ++ " " ++ show val
-  show (Arithm reg t v1 v2 op) = show reg ++ " = " ++ show op ++ " " 
+  show (Arithm reg t v1 v2 op) = show reg ++ " = " ++ show op ++ " "
     ++ show t ++ " " ++ show v1 ++ ", " ++ show v2
-  -- show (Br Label) = 
-  -- show (BrCond Type Val Label Label) = 
-  show (Load r1 t1 t2 r2) = show r1 ++ " = load " ++ show t1 ++ ", " 
+  show (Br label) = "br " ++ showLabelReg label
+  show (BrCond t val l1 l2) = "br " ++ show t ++ " " ++ show val 
+    ++ ", " ++ showLabelReg l1 ++ ", " ++ showLabelReg l2
+  show (Load r1 t1 t2 r2) = show r1 ++ " = load " ++ show t1 ++ ", "
     ++ show t2 ++ " " ++ show r2
   show (Store t1 v1 t2 r) = "store " ++ show t1 ++ " " ++ show v1 ++ ", "
     ++ show t2 ++ " " ++ show r
@@ -128,15 +138,26 @@ instance Show LLVMStmt where
   -- show (GetElementPtr Reg Type Type Val Type Val) = 
   -- show (Bitcast Reg Type Val Type) = 
   -- show (Sext Reg Type Val Type) = 
-   
+  show (Phi reg t phiArgs) = show reg ++ " = phi " ++ show t 
+    ++ " " ++ printPhiArgs True phiArgs
+
 -- print llvm code from in-memory structures -- 
+
+printPhiArgs :: Bool -> [(Val, Label)] -> String
+printPhiArgs _ [] = []
+printPhiArgs first ((v, l):args) = 
+  (if first then "" else ", ")
+  ++
+  "[ " ++ show v ++ ", " ++ showLabelReg l ++ " ]"
+  ++
+  printPhiArgs False args
 
 printArgsWithVals :: Bool -> [(Type, Val)] -> String
 printArgsWithVals _ [] = []
 printArgsWithVals first ((t, val):args) =
   (if first then "" else ", ")
   ++
-  show t ++ " " 
+  show t ++ " "
   ++
   show val
   ++
@@ -153,10 +174,10 @@ printLLBlocks :: Bool -> [LLBlock] -> [String]
 printLLBlocks _ [] = []
 printLLBlocks first (block:blocks) = do
   let stmts = bStmts block
-  let blockStmts = map printStmt (reverse stmts)
+  let blockStmts = Prelude.map printStmt (reverse stmts) -- todo 
   let nextBlockStmts = printLLBlocks False blocks
   if not first then
-    show (bLabel block) : blockStmts ++ nextBlockStmts
+    showLabel (bLabel block) : blockStmts ++ nextBlockStmts
   else
     blockStmts ++ nextBlockStmts
 
@@ -165,22 +186,21 @@ printArgs _ _ [] = []
 printArgs first register ((t, _):args) =
   (if first then "" else ", ")
   ++
-  show t ++ " " 
+  show t ++ " "
   ++
   show (Reg register)
   ++
   printArgs False (register + 1) args
- 
 
 printFunctions :: [Fn] -> [String]
 printFunctions [] = []
-printFunctions (fn:fns) = 
+printFunctions (fn:fns) =
   [
-    "\ndefine " ++ show (fType fn) ++ " @" ++ fName fn 
+    "\ndefine " ++ show (fType fn) ++ " @" ++ fName fn
     ++ "(" ++ printArgs True 0 (fArgs fn) ++ ") {"
   ]
   ++
-  printLLBlocks True (reverse $ fBlocks fn)
+  printLLBlocks True (Prelude.map snd (toList (fBlocks fn)))
   ++
   ["}"]
   ++
