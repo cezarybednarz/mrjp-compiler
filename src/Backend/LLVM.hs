@@ -39,7 +39,9 @@ data LLVMStmt = Call Reg Type String [(Type, Val)]
   deriving (Eq, Ord)
 
 data LLBlock = LLBlock { bLabel :: Label,
-                     bStmts     :: [LLVMStmt]
+                         bStmts :: [LLVMStmt],
+                         bPhis :: Map.Map Reg (Type, [(Val, Label)]),
+                         bInBlocks :: [Label]
                   }
   deriving (Eq, Ord, Show)
 
@@ -85,7 +87,7 @@ instance Show ArithmOp where
   show Rem = "srem"
 
 instance Show Reg where
-  show (Reg i) = "%" ++ show i
+  show (Reg i) = "%r" ++ show i
 
 instance Show Val where
   show (VConst i) = show i
@@ -97,7 +99,7 @@ instance Show Val where
   show VFalse = "false"
 
 instance Show Label where
-  show (Label l) =  show l
+  show (Label l) = "L" ++ show l
 
 showLabel :: Label -> String
 showLabel label =

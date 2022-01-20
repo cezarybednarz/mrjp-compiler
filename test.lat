@@ -1,0 +1,14 @@
+
+int main() {
+  if (test(3) && test(-5)) {
+    return 0;
+  }
+  if (test(3) && test(-5)) {
+    return 0;
+  }
+  return 0 ;
+}
+
+boolean test(int i) {
+  return i > 0;
+}
