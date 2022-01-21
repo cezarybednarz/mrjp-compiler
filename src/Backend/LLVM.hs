@@ -192,11 +192,19 @@ printStrConstants ((StrConstant id len str):strConstants) =
   ++ show len ++ " x i8] c\"" ++ convertStr str ++ "\\00\", align 1")
   : printStrConstants strConstants
 
+convPhisToLLVMStmts :: [(Reg, (Type, [(Val, Label)]))] -> [LLVMStmt]
+convPhisToLLVMStmts [] = []
+convPhisToLLVMStmts ((reg, (t, phiVals)):phis) = 
+  Phi reg t phiVals 
+  :
+  convPhisToLLVMStmts phis
+
 printLLBlocks :: Bool -> [LLBlock] -> [String]
 printLLBlocks _ [] = []
 printLLBlocks first (block:blocks) = do
-  let stmts = bStmts block
-  let blockStmts = Prelude.map printStmt (reverse stmts) -- todo
+  let phis = bPhis block
+  let stmts = bStmts block ++ convPhisToLLVMStmts (Map.toList phis)
+  let blockStmts = Prelude.map printStmt (reverse stmts) 
   let nextBlockStmts = printLLBlocks False blocks
   if not first then
     showLabel (bLabel block) : blockStmts ++ nextBlockStmts

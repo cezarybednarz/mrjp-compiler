@@ -118,7 +118,9 @@ putPhiForBlock label reg t phiVal = do
   state <- get 
   let f:functions = sFunctions state
   let (Just b) = Map.lookup label (fBlocks f)
-  let (Just (_, phis)) = Map.lookup reg (bPhis b)
+  let phis = case Map.lookup reg (bPhis b) of
+        Nothing -> []
+        (Just (_, ps)) -> ps
   let block = b { bPhis = Map.insert reg (t, phiVal:phis) (bPhis b)}
   let function = f { fBlocks = Map.insert label block (fBlocks f) }
   put $ state { sFunctions = function:functions}

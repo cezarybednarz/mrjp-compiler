@@ -4,7 +4,8 @@ int main() {
   if (test(3) && test(-5)) {
     return 0;
   }
-  if (test(3) && test(-5)) {
+  if (test(3) || test(-5)) {
+    printString("ok");
     return 0;
   }
   return 0 ;
