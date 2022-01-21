@@ -69,6 +69,12 @@ data ArithmOp = Add
 data StrConstant = StrConstant Int Int String -- id length value
   deriving (Eq, Ord, Show)
 
+data LLVMProgram = LLVMProgram {
+  pStrConstants :: [StrConstant],
+  pCurrReg :: Reg,
+  pFunctions :: [Fn]
+}
+
 -- show for llvm types --
 
 instance Show Cond where

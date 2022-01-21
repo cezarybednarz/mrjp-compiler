@@ -9,17 +9,21 @@ import           Backend.Environment
 import           Backend.LLVM         as LLVM
 import           Common.Runtime
 import           Latte.Abs            as Latte
+import Optimizations.Mem2Reg 
 
--- function for starting compilation --
-runMain :: Program -> CM String
-runMain (Program line tds) = do
+-- function for starting compilation and optimization --
+runBackend :: Program -> CM LLVMProgram
+runBackend (Program line tds) = do
   emitStrConst ""
   addFnTypesToState (tds ++ libraryFunctions line)
   env <- compileTopDefs tds
   state <- get
-  let strConstants = sStrConstants state
-  let functions = sFunctions state
-  return $ unlines $ printLLVMProgram strConstants functions
+  return LLVMProgram {
+    pStrConstants = sStrConstants state,
+    pFunctions = sFunctions state,
+    pCurrReg = sCurrReg state
+  }
+
 
 -- compiler state modifiers --
 

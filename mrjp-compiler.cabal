@@ -38,6 +38,7 @@ library
       Latte.Print
       Latte.Skel
       Main
+      Optimizations.Mem2Reg
   other-modules:
       Paths_mrjp_compiler
   hs-source-dirs:
@@ -67,6 +68,7 @@ executable compiler
       Latte.Par
       Latte.Print
       Latte.Skel
+      Optimizations.Mem2Reg
       Paths_mrjp_compiler
   hs-source-dirs:
       src

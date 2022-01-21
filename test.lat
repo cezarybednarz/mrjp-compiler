@@ -1,5 +1,6 @@
 
 int main() {
+  string s = "siema";
   if (test(3) && test(-5)) {
     return 0;
   }

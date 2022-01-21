@@ -6,13 +6,14 @@ import           Control.Monad.Except
 import           Control.Monad.Reader
 import           Control.Monad.State
 import           Latte.Abs
+import Backend.LLVM ( LLVMProgram )
 
 -- run Compiler Monad --
 runCM :: CM a -> CompilerState -> Env -> IO (Either String a, CompilerState)
 runCM m cs en = runStateT (runExceptT (runReaderT m en)) cs
 
 -- start compiling program from main --
-runCompilation :: Program -> IO (Either String String, CompilerState)
+runCompilation :: Program -> IO (Either String LLVMProgram, CompilerState)
 runCompilation program =
-  runCM (runMain program) initCompilerState initEnv
+  runCM (runBackend program) initCompilerState initEnv
 

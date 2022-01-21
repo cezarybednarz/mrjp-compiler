@@ -8,6 +8,8 @@ import           System.Environment   (getArgs)
 import           System.Exit          (exitFailure, exitSuccess)
 import           System.IO            (hPutStrLn, putStrLn, stderr)
 import Backend.Run
+import Optimizations.Mem2Reg
+import Backend.LLVM
 
 
 printUsage :: IO ()
@@ -16,7 +18,7 @@ printUsage = putStrLn "usage: ./compiler <filename>"
 main :: IO ()
 main = do
   args <- getArgs
-  case args of
+  case args of 
     [] -> printUsage
     (_:_:_) -> printUsage
     [inputFile] -> do
@@ -33,11 +35,6 @@ main = do
               exitFailure
             Right _ -> do
               hPutStrLn stderr "OK\n"
-              (llvmCompilation, _) <- runCompilation tree
-              case llvmCompilation of 
-                Left llvmError -> do
-                  hPutStrLn stderr llvmError
-                  exitFailure
-                Right llvmCode -> do
-                  putStrLn llvmCode
-                  exitSuccess
+              (Right llvmProgram, _) <- runCompilation tree
+              (llvmProgram2, _) <- runMem2Reg llvmProgram
+              putStrLn $ unlines $ printLLVMProgram (pStrConstants llvmProgram2) (pFunctions llvmProgram2)
