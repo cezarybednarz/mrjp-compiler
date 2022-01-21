@@ -1,2 +1,2 @@
 all:
-	cabal install --overwrite-policy=always --installdir=dist-newstyle compiler
+	cabal install --install-method=copy --overwrite-policy=always --installdir=dist-newstyle compiler
