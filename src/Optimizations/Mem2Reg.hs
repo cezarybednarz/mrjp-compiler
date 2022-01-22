@@ -17,7 +17,7 @@ data OptimizerState = OptimizerState {
   sProgram :: LLVMProgram,
   sNewProgram :: LLVMProgram,
   sCurrentFn :: Maybe Fn,
-  sCurrentDef :: Map.Map Reg (Map.Map Label TypeReg) 
+  sCurrentDef :: Map.Map Reg (Map.Map Label TypeReg)
 }
 
 -- acessors to state -- 
@@ -41,7 +41,7 @@ setNewProgram program = do
 getCurrentFn :: OM Fn
 getCurrentFn = do
   state <- get
-  let (Just fn) = sCurrentFn state 
+  let (Just fn) = sCurrentFn state
   return fn
 
 setCurrentFn :: Fn -> OM ()
@@ -70,14 +70,14 @@ putPhiForBlock :: Label -> TypeReg -> (Val, Label) -> OM ()
 putPhiForBlock label (TypeReg t reg) phiVal = do
   b <- getBlock label
   f <- getCurrentFn
-  state <- get 
+  state <- get
   let (Just (_, phis)) = Map.lookup reg (bPhis b)
   let block = b { bPhis = Map.insert reg (t, phiVal:phis) (bPhis b)}
   let newFunction = f { fBlocks = Map.insert label block (fBlocks f) }
-  setCurrentFn newFunction 
+  setCurrentFn newFunction
   return ()
 
-clearCurrentDef :: OM () 
+clearCurrentDef :: OM ()
 clearCurrentDef = do
   state <- get
   put $ state { sCurrentDef = Map.empty }
@@ -113,16 +113,39 @@ runOptimization = do
   return $ sNewProgram state
 
 -- functions for optimizing structures in LLVM --
-optimizeStmt :: LLVMStmt -> OM (Maybe LLVMStmt)
-optimizeStmt llvmstmt = do
-  -- todo
-  return (Just llvmstmt)
+optimizeStmt :: Label -> LLVMStmt -> OM (Maybe LLVMStmt)
+optimizeStmt label llvmstmt = do
+  case llvmstmt of
+    (Call r1 t1 s1 ts) -> return $ Just (Call r1 t1 s1 ts)
+    (CallVoid t1 s1 ts) -> return $ Just (CallVoid t1 s1 ts)
+    (LLVM.Ret t1 v1) -> return $ Just (LLVM.Ret t1 v1)
+    RetVoid -> return $ Just RetVoid
+    (Arithm r1 t1 v1 v2 op) -> do
+      v1' <- readVal (t1, v1) label
+      v2' <- readVal (t1, v2) label
+      return $ Just (Arithm r1 t1 v1' v2' op)
+    (Br l1) -> return $ Just (Br l1)
+    (BrCond t1 v1 l1 l2) -> do
+      v1' <- readVal (t1, v1) label
+      return $ Just (BrCond t1 v1' l1 l2)
+    (Load {}) -> return Nothing -- todo moze write variable
+    (Store {}) -> return Nothing -- todo moze write variable
+    (Alloca {}) -> return Nothing -- todo moze write vairable
+    (Cmp r1 c1 t1 v1 v2) -> do
+      v1' <- readVal (t1, v1) label
+      v2' <- readVal (t1, v2) label
+      return $ Just (Cmp r1 c1 t1 v1' v2')
+    (Xor r1 t1 v1 v2) -> do
+      v1' <- readVal (t1, v1) label
+      v2' <- readVal (t1, v2) label
+      return $ Just (Xor r1 t1 v1' v2')
+    Phi {} -> return Nothing -- phis are stored in map inside block
 
-optimizeStmtsList :: [LLVMStmt] -> OM [LLVMStmt]
-optimizeStmtsList [] = return []
-optimizeStmtsList (stmt:stmts) = do
-  finalStmtsList <- optimizeStmtsList stmts
-  optimizedStmt <- optimizeStmt stmt
+optimizeStmtsList :: Label -> [LLVMStmt] -> OM [LLVMStmt]
+optimizeStmtsList _ [] = return []
+optimizeStmtsList label (stmt:stmts) = do
+  finalStmtsList <- optimizeStmtsList label stmts
+  optimizedStmt <- optimizeStmt label stmt
   case optimizedStmt of
     (Just llvmstmt) -> do
       return $ llvmstmt : finalStmtsList
@@ -131,8 +154,9 @@ optimizeStmtsList (stmt:stmts) = do
 
 optimizeBlock :: LLBlock -> OM LLBlock
 optimizeBlock block = do
-  let stmts = reverse $ bStmts block -- todo czy na pewno reverse
-  newStmts <- optimizeStmtsList stmts
+  let stmts = reverse $ bStmts block
+  let label = bLabel block
+  newStmts <- optimizeStmtsList label stmts
   return $ block { bStmts = newStmts }
 
 optimizeCurrFn :: OM ()
@@ -166,7 +190,16 @@ writeVariable (TypeReg t targetReg) label val = do
   put $ state { sCurrentDef = newCurrentDef }
   return ()
 
--- read register from block --
+-- read value from block -- 
+readVal :: (LLVM.Type, Val) -> Label -> OM Val
+readVal (t, val) label = do
+  case val of
+    (VReg reg) -> do
+      (TypeReg _ optimizedReg) <- readVariable (TypeReg t reg) label
+      return $ VReg optimizedReg
+    val' -> return val'
+
+-- read register from block (from modern SSA algorithm) --
 readVariable :: TypeReg -> Label -> OM TypeReg
 readVariable (TypeReg t reg) label = do
   state <- get
@@ -181,11 +214,11 @@ readVariable (TypeReg t reg) label = do
     Nothing -> do
       readVariableRecursive (TypeReg t reg) label
 
--- read register recursively through predecessor blocks --
+-- read register recursively through predecessor blocks (from modern SSA algorithm) --
 readVariableRecursive :: TypeReg -> Label -> OM TypeReg
 readVariableRecursive (TypeReg t reg) label = do
   block <- getBlock label
-  val <- case bInBlocks block of 
+  val <- case bInBlocks block of
     [inBlockLabel] -> do -- single predecessor, no phi
       readVariable (TypeReg t reg) label
     inBlockLabels -> do
@@ -196,7 +229,7 @@ readVariableRecursive (TypeReg t reg) label = do
   writeVariable (TypeReg t reg) label val
   return val
 
--- add phi operand --
+-- add phi operand (from modern SSA algorithm)--
 addPhiOperands :: TypeReg -> Label -> TypeReg -> OM TypeReg
 addPhiOperands variable label (TypeReg _ regPhi) = do
   block <- getBlock label
