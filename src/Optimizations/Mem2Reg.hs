@@ -33,6 +33,11 @@ getNewProgram :: OM LLVMProgram
 getNewProgram =
   gets sProgram
 
+setNewProgram :: LLVMProgram -> OM ()
+setNewProgram program = do
+  state <- get
+  put $ state { sNewProgram = program }
+
 getCurrentFn :: OM Fn
 getCurrentFn = do
   state <- get
@@ -72,26 +77,10 @@ putPhiForBlock label (TypeReg t reg) phiVal = do
   setCurrentFn newFunction 
   return ()
 
-clearBlock :: LLBlock -> OM LLBlock
-clearBlock block = do
-  return $ block { bStmts = [] }
-
-clearFn :: Fn -> OM Fn
-clearFn fn = do
-  let (labels, blocks) = Prelude.unzip $ Map.toList (fBlocks fn)
-  clearBlocks <- mapM clearBlock blocks
-  let newFBlocks = Map.fromList $ Prelude.zip labels clearBlocks
-  return $ fn { fBlocks = newFBlocks }
-
-clearNewProgram :: OM ()
-clearNewProgram = do
-  program <- getNewProgram
-  let functions = pFunctions program
-  newFunctions <- mapM clearFn functions  
-  let newProgram = program { pFunctions = newFunctions }
+clearCurrentDef :: OM () 
+clearCurrentDef = do
   state <- get
-  put $ state { sNewProgram = newProgram}
-  return ()
+  put $ state { sCurrentDef = Map.empty }
 
 -- optimizer monad -- 
 type OM a = (StateT OptimizerState IO) a
@@ -118,9 +107,51 @@ runMem2Reg llvmProgram =
 runOptimization :: OM LLVMProgram
 runOptimization = do
   state <- get
-  clearNewProgram
-  -- todo odpalić przetwarzanie funkcji
+  newProgram <- getNewProgram
+  optimizedFunctions <- optimizeFns (pFunctions newProgram)
+  setNewProgram (newProgram { pFunctions = optimizedFunctions })
   return $ sNewProgram state
+
+-- functions for optimizing structures in LLVM --
+optimizeStmt :: LLVMStmt -> OM (Maybe LLVMStmt)
+optimizeStmt llvmstmt = do
+  -- todo
+  return (Just llvmstmt)
+
+optimizeStmtsList :: [LLVMStmt] -> OM [LLVMStmt]
+optimizeStmtsList [] = return []
+optimizeStmtsList (stmt:stmts) = do
+  finalStmtsList <- optimizeStmtsList stmts
+  optimizedStmt <- optimizeStmt stmt
+  case optimizedStmt of
+    (Just llvmstmt) -> do
+      return $ llvmstmt : finalStmtsList
+    Nothing -> do
+      return finalStmtsList
+
+optimizeBlock :: LLBlock -> OM LLBlock
+optimizeBlock block = do
+  let stmts = reverse $ bStmts block -- todo czy na pewno reverse
+  newStmts <- optimizeStmtsList stmts
+  return $ block { bStmts = newStmts }
+
+optimizeCurrFn :: OM ()
+optimizeCurrFn = do
+  clearCurrentDef
+  fn <- getCurrentFn
+  let (labels, blocks) = Prelude.unzip $ Map.toList $ fBlocks fn
+  newBlocks <- mapM optimizeBlock blocks
+  setCurrentFn $ fn { fBlocks = Map.fromList (Prelude.zip labels newBlocks)}
+  return ()
+
+optimizeFns :: [Fn] -> OM [Fn]
+optimizeFns [] = return []
+optimizeFns (fn:fns) = do
+  setCurrentFn fn
+  optimizeCurrFn
+  newFn <- getCurrentFn
+  finalOptimizedFns <- optimizeFns fns
+  return $ newFn : finalOptimizedFns
 
 -- assign register to block -- 
 writeVariable :: TypeReg -> Label -> TypeReg -> OM ()
