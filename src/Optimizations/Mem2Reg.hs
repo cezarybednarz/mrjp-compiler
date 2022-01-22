@@ -8,17 +8,29 @@ import Data.Map as Map
 -- Modern SSA Algorithm
 -- https://pp.info.uni-karlsruhe.de/uploads/publikationen/braun13cc.pdf
 
+-- type reg --
+data TypeReg = TypeReg LLVM.Type Reg
+  deriving (Show, Ord, Eq)
+
 -- mem2reg state monad --
 data OptimizerState = OptimizerState {
   sProgram :: LLVMProgram,
   sNewProgram :: LLVMProgram,
   sCurrentFn :: Maybe Fn,
-  sCurrentDef :: Map.Map Reg (Map.Map Label Reg) -- todo add type
+  sCurrentDef :: Map.Map Reg (Map.Map Label TypeReg) 
 }
 
 -- acessors to state -- 
-getProgram :: OM LLVMProgram
-getProgram =
+newRegister :: OM Reg
+newRegister = do
+  program <- getNewProgram
+  state <- get
+  let (Reg reg) = pCurrReg program
+  put $ state { sNewProgram = (program { pCurrReg = Reg (reg + 1)}) }
+  return $ Reg reg
+
+getNewProgram :: OM LLVMProgram
+getNewProgram =
   gets sProgram
 
 getCurrentFn :: OM Fn
@@ -39,8 +51,18 @@ getBlock label = do
   let (Just block) = Map.lookup label (fBlocks function)
   return block
 
-putPhiForBlock :: Label -> Reg -> LLVM.Type -> (Val, Label) -> OM ()
-putPhiForBlock label reg t phiVal = do
+putEmptyPhiForBlock :: Label -> TypeReg -> OM ()
+putEmptyPhiForBlock label (TypeReg t reg) = do
+  b <- getBlock label
+  f <- getCurrentFn
+  state <- get
+  let block = b { bPhis = Map.insert reg (t, []) (bPhis b) }
+  let newFunction = f { fBlocks = Map.insert label block (fBlocks f) }
+  setCurrentFn newFunction
+  return ()
+
+putPhiForBlock :: Label -> TypeReg -> (Val, Label) -> OM ()
+putPhiForBlock label (TypeReg t reg) phiVal = do
   b <- getBlock label
   f <- getCurrentFn
   state <- get 
@@ -86,8 +108,8 @@ runOptimization = do
   return newProgram
 
 -- assign register to block -- 
-writeVariable :: Reg -> Label -> Reg -> OM ()
-writeVariable targetReg label val = do
+writeVariable :: TypeReg -> Label -> TypeReg -> OM ()
+writeVariable (TypeReg t targetReg) label val = do
   state <- get
   let currentDef = sCurrentDef state
   let newCurrentDef = case Map.lookup targetReg currentDef of
@@ -99,8 +121,8 @@ writeVariable targetReg label val = do
   return ()
 
 -- read register from block --
-readVariable :: Reg -> Label -> OM Reg
-readVariable reg label = do
+readVariable :: TypeReg -> Label -> OM TypeReg
+readVariable (TypeReg t reg) label = do
   state <- get
   let currentDef = sCurrentDef state
   case Map.lookup reg currentDef of
@@ -109,18 +131,34 @@ readVariable reg label = do
         (Just val) ->
           return val
         Nothing ->
-          readVariableRecursive reg label
+          readVariableRecursive (TypeReg t reg) label
     Nothing -> do
-      readVariableRecursive reg label
+      readVariableRecursive (TypeReg t reg) label
 
 -- read register recursively through predecessor blocks --
-readVariableRecursive :: Reg -> Label -> OM Reg
-readVariableRecursive reg label = do
+readVariableRecursive :: TypeReg -> Label -> OM TypeReg
+readVariableRecursive (TypeReg t reg) label = do
   block <- getBlock label
   val <- case bInBlocks block of 
     [inBlockLabel] -> do -- single predecessor, no phi
-      readVariable reg label
+      readVariable (TypeReg t reg) label
     inBlockLabels -> do
-      readVariable reg label -- todo usunac to i dodac z papera
-  writeVariable reg label val
+      regPhi <- newRegister
+      putEmptyPhiForBlock label (TypeReg t regPhi)
+      writeVariable (TypeReg t reg) label (TypeReg t regPhi)
+      addPhiOperands (TypeReg t reg) label (TypeReg t regPhi)
+  writeVariable (TypeReg t reg) label val
   return val
+
+-- add phi operand --
+addPhiOperands :: TypeReg -> Label -> TypeReg -> OM TypeReg
+addPhiOperands variable label (TypeReg _ regPhi) = do
+  block <- getBlock label
+  let preds = bInBlocks block
+  mapM_ (appendOperands label variable regPhi) preds
+  return variable
+
+-- helper function for addPhiOperands --
+appendOperands :: Label -> TypeReg -> Reg -> Label -> OM ()
+appendOperands label typeReg val label2 = do
+  putPhiForBlock label typeReg (VReg val, label2)
