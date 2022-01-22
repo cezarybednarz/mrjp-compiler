@@ -72,9 +72,25 @@ putPhiForBlock label (TypeReg t reg) phiVal = do
   setCurrentFn newFunction 
   return ()
 
+clearBlock :: LLBlock -> OM LLBlock
+clearBlock block = do
+  return $ block { bStmts = [] }
+
+clearFn :: Fn -> OM Fn
+clearFn fn = do
+  let (labels, blocks) = Prelude.unzip $ Map.toList (fBlocks fn)
+  clearBlocks <- mapM clearBlock blocks
+  let newFBlocks = Map.fromList $ Prelude.zip labels clearBlocks
+  return $ fn { fBlocks = newFBlocks }
+
 clearNewProgram :: OM ()
 clearNewProgram = do
-  -- todo
+  program <- getNewProgram
+  let functions = pFunctions program
+  newFunctions <- mapM clearFn functions  
+  let newProgram = program { pFunctions = newFunctions }
+  state <- get
+  put $ state { sNewProgram = newProgram}
   return ()
 
 -- optimizer monad -- 
@@ -104,8 +120,7 @@ runOptimization = do
   state <- get
   clearNewProgram
   -- todo odpalić przetwarzanie funkcji
-  let newProgram = sNewProgram state
-  return newProgram
+  return $ sNewProgram state
 
 -- assign register to block -- 
 writeVariable :: TypeReg -> Label -> TypeReg -> OM ()
