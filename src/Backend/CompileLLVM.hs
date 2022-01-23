@@ -562,7 +562,7 @@ compileStmt (CondElse _ expr block1 block2) = do
       putInBlockForBlock lTrue lStart
       putInBlockForBlock lFalse lStart
       emitStmtForLabel (Br lEnd) lTrue2
-      putInBlockForBlock lEnd lStart
+      putInBlockForBlock lEnd lTrue2
       emitStmtForLabel (Br lEnd) lFalse2
       putInBlockForBlock lEnd lFalse2
       return (ReturnNothing, env)
@@ -579,7 +579,7 @@ compileStmt (While _ expr block) = do
   local (const env) $ compileBlock block
   emitStmt $ Br lStart
   lCurr <- getLabel
-  putInBlockForBlock lStart lCurr
+  putInBlockForBlock lCurr lStart
   lEnd <- newLabel
   emitNewBlock lEnd
   emitStmtForLabel (Br lStart) lStart0

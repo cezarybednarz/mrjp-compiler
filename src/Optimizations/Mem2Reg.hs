@@ -261,8 +261,10 @@ readVariableRecursive t reg label = do
       readVariable t reg label
     inBlockLabels -> do
       regPhi <- newRegister
+      debugString $ "regPhi: " ++ show regPhi
+      debugString $ "reg:    " ++ show reg
       putEmptyPhiForBlock label t regPhi
-      writeVariable regPhi label (TypeVal t (VReg reg))
+      writeVariable reg label (TypeVal t (VReg regPhi)) -- todo moze zamienic reg i regPhi
       addPhiOperands regPhi label (TypeVal t (VReg reg))
   writeVariable reg label val
   return val
@@ -272,13 +274,16 @@ addPhiOperands :: Reg -> Label -> TypeVal -> OM TypeVal
 addPhiOperands variable label (TypeVal t valPhi) = do
   block <- getBlock label
   let preds = bInBlocks block
+  debugString $ "block: " ++ show (bLabel block)
+  debugString $ "preds: " ++ show preds
   mapM_ (appendOperands label variable (TypeVal t valPhi)) preds
   return (TypeVal t (VReg variable))
 
 -- helper function for addPhiOperands --
 appendOperands :: Label -> Reg -> TypeVal -> Label -> OM ()
-appendOperands label typeReg (TypeVal t val) label2 = do
-  putPhiForBlock label t typeReg (val, label2)
+appendOperands label variable (TypeVal t val) label2 = do
+  val' <- readVal (TypeVal t val) label2
+  putPhiForBlock label t variable (val', label2)
 
 -- ! debug functions 
 
