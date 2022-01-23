@@ -11,8 +11,8 @@ define i32 @main() {
   br label %L1
 L1:
   %r4 = sub i32 0, 1234234
-  call void @printInt(i32 %r5)
-  call void @printInt(i32 %r6)
+  call void @printInt(i32 %r4)
+  call void @printInt(i32 7)
   ret i32 0
 }
 

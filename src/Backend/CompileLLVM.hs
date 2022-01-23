@@ -579,7 +579,7 @@ compileStmt (While _ expr block) = do
   local (const env) $ compileBlock block
   emitStmt $ Br lStart
   lCurr <- getLabel
-  putInBlockForBlock lCurr lStart
+  putInBlockForBlock lStart lCurr
   lEnd <- newLabel
   emitNewBlock lEnd
   emitStmtForLabel (Br lStart) lStart0

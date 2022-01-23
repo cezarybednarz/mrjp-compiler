@@ -143,6 +143,10 @@ optimizeStmt label llvmstmt = do
     (Load r1 t1 t2 r2) -> do
       r2Val' <- readVal (TypeVal t1 (VReg r2)) label
       writeVariable r1 label (TypeVal t1 r2Val')
+      debugString $ "r1: " ++ show r1
+      debugString $ "r2: " ++ show r2
+      debugString $ "r2Val: " ++ show r1
+
       return Nothing
     (Store t1 v1 t2 r) -> do
       writeVariable r label (TypeVal t1 v1)
@@ -165,7 +169,7 @@ optimizeArgsList label [] = return []
 optimizeArgsList label ((t, val):args) = do
   val' <- readVal (TypeVal t val) label
   optimizedArgsList <- optimizeArgsList label args
-  return $ (t, val) : optimizedArgsList
+  return $ (t, val') : optimizedArgsList
 
 optimizeStmtsList :: Label -> [LLVMStmt] -> OM [LLVMStmt]
 optimizeStmtsList _ [] = return []
@@ -188,7 +192,8 @@ optimizeBackendPhis label block = do
 
 optimizeBlock :: LLBlock -> OM LLBlock
 optimizeBlock block = do
-  debugString "-----"
+  debugString $ show $ bLabel block
+  debugString $ show $ bInBlocks block
   let stmts = bStmts block
   let label = bLabel block
   optimizeBackendPhis label block
@@ -258,13 +263,13 @@ readVariableRecursive t reg label = do
   block <- getBlock label
   val <- case bInBlocks block of
     [inBlockLabel] -> do -- single predecessor, no phi
-      readVariable t reg label
+      readVariable t reg inBlockLabel
     inBlockLabels -> do
       regPhi <- newRegister
-      debugString $ "regPhi: " ++ show regPhi
-      debugString $ "reg:    " ++ show reg
+      --debugString $ "reg: " ++ show reg
+      --debugString $ "regPhi: " ++ show regPhi
       putEmptyPhiForBlock label t regPhi
-      writeVariable reg label (TypeVal t (VReg regPhi)) -- todo moze zamienic reg i regPhi
+      writeVariable reg label (TypeVal t (VReg regPhi)) 
       addPhiOperands regPhi label (TypeVal t (VReg reg))
   writeVariable reg label val
   return val
@@ -274,8 +279,6 @@ addPhiOperands :: Reg -> Label -> TypeVal -> OM TypeVal
 addPhiOperands variable label (TypeVal t valPhi) = do
   block <- getBlock label
   let preds = bInBlocks block
-  debugString $ "block: " ++ show (bLabel block)
-  debugString $ "preds: " ++ show preds
   mapM_ (appendOperands label variable (TypeVal t valPhi)) preds
   return (TypeVal t (VReg variable))
 

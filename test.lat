@@ -1,12 +1,15 @@
-int main () {
-  int x;
-  int y = 56;
-  if (y <= 2) {
-    x = 1;
-  } else {
-    x = 2;
-  }
-  printInt(x);
-  return 0 ;
 
+int main () {
+  int a = 5;
+  int r;
+  int n;
+  r = 1;
+  n = a;
+  while (n > 0)
+  {
+    r = r * n;
+    n = n - 1;
+  }
+  printInt(r);
+  return 0;
 }

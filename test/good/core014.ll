@@ -8,39 +8,21 @@ declare i8* @__concatStrings__(i8*, i8*)
 @.str.0 = private unnamed_addr constant [1 x i8] c"\00", align 1
 
 define i32 @main() {
-  br label %1
-1:
-  %2 = alloca i32
-  store i32 0, i32* %2
-  %3 = alloca i32
-  store i32 0, i32* %3
-  %4 = alloca i32
-  store i32 0, i32* %4
-  store i32 1, i32* %2
-  %5 = load i32, i32* %2
-  store i32 %5, i32* %3
-  store i32 5000000, i32* %4
-  %6 = load i32, i32* %2
-  call void @printInt(i32 %6)
-  br label %7
-7:
-  %8 = load i32, i32* %3
-  %9 = load i32, i32* %4
-  %10 = icmp slt i32 %8, %9
-  br i1 %10, label %11, label %19
-11:
-  %12 = load i32, i32* %3
-  call void @printInt(i32 %12)
-  %13 = load i32, i32* %2
-  %14 = load i32, i32* %3
-  %15 = add i32 %13, %14
-  store i32 %15, i32* %3
-  %16 = load i32, i32* %3
-  %17 = load i32, i32* %2
-  %18 = sub i32 %16, %17
-  store i32 %18, i32* %2
-  br label %7
-19:
+  br label %L1
+L1:
+  call void @printInt(i32 1)
+  br label %L7
+L7:
+  %r10 = icmp slt i32 %r5, 5000000
+  br i1 %r10, label %L11, label %L19
+L11:
+  %r22 = phi i32 [ 1, %L7 ], [ 1, %L7 ]
+  %r21 = phi i32 [ %r5, %L7 ], [ %r5, %L7 ]
+  call void @printInt(i32 %r21)
+  %r15 = add i32 %r22, %r21
+  %r18 = sub i32 %r15, %r22
+  br label %L7
+L19:
   ret i32 0
 }
 

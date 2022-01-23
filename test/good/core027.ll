@@ -10,20 +10,16 @@ declare i8* @__concatStrings__(i8*, i8*)
 @.str.0 = private unnamed_addr constant [1 x i8] c"\00", align 1
 
 define i32 @main() {
-  br label %1
-1:
+  br label %L1
+L1:
   call void @f(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i32 0, i32 0))
   ret i32 0
 }
 
-define void @f(i8* %0) {
-  br label %2
-2:
-  %3 = alloca i8*
-  store i8* %0, i8** %3
-  store i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.2, i32 0, i32 0), i8** %3
-  %4 = load i8*, i8** %3
-  call void @printString(i8* %4)
+define void @f(i8* %r0) {
+  br label %L2
+L2:
+  call void @printString(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.2, i32 0, i32 0))
   ret void
 }
 

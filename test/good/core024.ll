@@ -10,39 +10,33 @@ declare i8* @__concatStrings__(i8*, i8*)
 @.str.0 = private unnamed_addr constant [1 x i8] c"\00", align 1
 
 define i32 @main() {
-  br label %1
-1:
+  br label %L1
+L1:
   call void @f(i32 1, i32 2)
   ret i32 0
 }
 
-define void @f(i32 %0, i32 %1) {
-  br label %3
-3:
-  %4 = alloca i32
-  store i32 %0, i32* %4
-  %5 = alloca i32
-  store i32 %1, i32* %5
-  %6 = load i32, i32* %5
-  %7 = load i32, i32* %4
-  %8 = icmp sgt i32 %6, %7
-  br i1 %8, label %11, label %9
-9:
-  %10 = call i1 @e()
-  br label %11
-11:
-  %12 = phi i1 [ true, %3 ], [ %10, %9 ]
-  br i1 %12, label %13, label %14
-13:
+define void @f(i32 %r0, i32 %r1) {
+  br label %L3
+L3:
+  %r8 = icmp sgt i32 %r1, %r0
+  br i1 %r8, label %L11, label %L9
+L9:
+  %r10 = call i1 @e()
+  br label %L11
+L11:
+  %r12 = phi i1 [ %r10, %L9 ], [ true, %L3 ]
+  br i1 %r12, label %L13, label %L14
+L13:
   call void @printString(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i32 0, i32 0))
-  br label %14
-14:
+  br label %L14
+L14:
   ret void
 }
 
 define i1 @e() {
-  br label %1
-1:
+  br label %L1
+L1:
   call void @printString(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.2, i32 0, i32 0))
   ret i1 false
 }

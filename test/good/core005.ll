@@ -18,7 +18,8 @@ L7:
 L8:
   br label %L9
 L9:
-  call void @printInt(i32 %r10)
+  %r12 = phi i32 [ 1, %L7 ], [ 2, %L8 ]
+  call void @printInt(i32 %r12)
   ret i32 0
 }
 

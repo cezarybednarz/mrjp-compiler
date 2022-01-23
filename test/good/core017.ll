@@ -11,133 +11,116 @@ declare i8* @__concatStrings__(i8*, i8*)
 @.str.0 = private unnamed_addr constant [1 x i8] c"\00", align 1
 
 define i32 @main() {
-  br label %1
-1:
-  %2 = alloca i32
-  store i32 4, i32* %2
-  %3 = load i32, i32* %2
-  %4 = icmp sle i32 3, %3
-  %5 = xor i1 %4, true
-  br i1 %5, label %15, label %6
-6:
-  %7 = icmp ne i32 4, 2
-  %8 = xor i1 %7, true
-  br i1 %8, label %11, label %9
-9:
-  %10 = xor i1 true, true
-  br label %11
-11:
-  %12 = phi i1 [ true, %6 ], [ %10, %9 ]
-  %13 = xor i1 %12, true
-  %14 = xor i1 %13, true
-  br label %15
-15:
-  %16 = phi i1 [ true, %1 ], [ %14, %11 ]
-  %17 = xor i1 %16, true
-  br i1 %17, label %18, label %19
-18:
+  br label %L1
+L1:
+  %r4 = icmp sle i32 3, 4
+  %r5 = xor i1 %r4, true
+  br i1 %r5, label %L15, label %L6
+L6:
+  %r7 = icmp ne i32 4, 2
+  %r8 = xor i1 %r7, true
+  br i1 %r8, label %L11, label %L9
+L9:
+  %r10 = xor i1 true, true
+  br label %L11
+L11:
+  %r12 = phi i1 [ %r10, %L9 ], [ true, %L6 ]
+  %r13 = xor i1 %r12, true
+  %r14 = xor i1 %r13, true
+  br label %L15
+L15:
+  %r16 = phi i1 [ %r14, %L11 ], [ true, %L1 ]
+  %r17 = xor i1 %r16, true
+  br i1 %r17, label %L18, label %L19
+L18:
   call void @printBool(i1 true)
-  br label %20
-19:
+  br label %L20
+L19:
   call void @printString(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i32 0, i32 0))
-  br label %20
-20:
-  %21 = icmp eq i1 true, true
-  br i1 %21, label %24, label %22
-22:
-  %23 = call i1 @dontCallMe(i32 1)
-  br label %24
-24:
-  %25 = phi i1 [ true, %20 ], [ %23, %22 ]
-  call void @printBool(i1 %25)
-  %26 = sub i32 0, 5
-  %27 = icmp slt i32 4, %26
-  %28 = xor i1 %27, true
-  br i1 %28, label %32, label %29
-29:
-  %30 = call i1 @dontCallMe(i32 2)
-  %31 = xor i1 %30, true
-  br label %32
-32:
-  %33 = phi i1 [ true, %24 ], [ %31, %29 ]
-  %34 = xor i1 %33, true
-  call void @printBool(i1 %34)
-  %35 = load i32, i32* %2
-  %36 = icmp eq i32 4, %35
-  %37 = xor i1 %36, true
-  br i1 %37, label %48, label %38
-38:
-  %39 = xor i1 false, true
-  %40 = icmp eq i1 true, %39
-  %41 = xor i1 %40, true
-  br i1 %41, label %44, label %42
-42:
-  %43 = xor i1 true, true
-  br label %44
-44:
-  %45 = phi i1 [ true, %38 ], [ %43, %42 ]
-  %46 = xor i1 %45, true
-  %47 = xor i1 %46, true
-  br label %48
-48:
-  %49 = phi i1 [ true, %32 ], [ %47, %44 ]
-  %50 = xor i1 %49, true
-  call void @printBool(i1 %50)
-  %51 = call i1 @implies(i1 false, i1 false)
-  call void @printBool(i1 %51)
-  %52 = call i1 @implies(i1 false, i1 true)
-  call void @printBool(i1 %52)
-  %53 = call i1 @implies(i1 true, i1 false)
-  call void @printBool(i1 %53)
-  %54 = call i1 @implies(i1 true, i1 true)
-  call void @printBool(i1 %54)
+  br label %L20
+L20:
+  %r21 = icmp eq i1 true, true
+  br i1 %r21, label %L24, label %L22
+L22:
+  %r23 = call i1 @dontCallMe(i32 1)
+  br label %L24
+L24:
+  %r25 = phi i1 [ %r23, %L22 ], [ true, %L20 ]
+  call void @printBool(i1 %r25)
+  %r26 = sub i32 0, 5
+  %r27 = icmp slt i32 4, %r26
+  %r28 = xor i1 %r27, true
+  br i1 %r28, label %L32, label %L29
+L29:
+  %r30 = call i1 @dontCallMe(i32 2)
+  %r31 = xor i1 %r30, true
+  br label %L32
+L32:
+  %r33 = phi i1 [ %r31, %L29 ], [ true, %L24 ]
+  %r34 = xor i1 %r33, true
+  call void @printBool(i1 %r34)
+  %r36 = icmp eq i32 4, %r15
+  %r37 = xor i1 %r36, true
+  br i1 %r37, label %L48, label %L38
+L38:
+  %r39 = xor i1 false, true
+  %r40 = icmp eq i1 true, %r39
+  %r41 = xor i1 %r40, true
+  br i1 %r41, label %L44, label %L42
+L42:
+  %r43 = xor i1 true, true
+  br label %L44
+L44:
+  %r45 = phi i1 [ %r43, %L42 ], [ true, %L38 ]
+  %r46 = xor i1 %r45, true
+  %r47 = xor i1 %r46, true
+  br label %L48
+L48:
+  %r49 = phi i1 [ %r47, %L44 ], [ true, %L32 ]
+  %r50 = xor i1 %r49, true
+  call void @printBool(i1 %r50)
+  %r51 = call i1 @implies(i1 false, i1 false)
+  call void @printBool(i1 %r51)
+  %r52 = call i1 @implies(i1 false, i1 true)
+  call void @printBool(i1 %r52)
+  %r53 = call i1 @implies(i1 true, i1 false)
+  call void @printBool(i1 %r53)
+  %r54 = call i1 @implies(i1 true, i1 true)
+  call void @printBool(i1 %r54)
   ret i32 0
 }
 
-define i1 @dontCallMe(i32 %0) {
-  br label %2
-2:
-  %3 = alloca i32
-  store i32 %0, i32* %3
-  %4 = load i32, i32* %3
-  call void @printInt(i32 %4)
+define i1 @dontCallMe(i32 %r0) {
+  br label %L2
+L2:
+  call void @printInt(i32 %r0)
   ret i1 true
 }
 
-define void @printBool(i1 %0) {
-  br label %2
-2:
-  %3 = alloca i1
-  store i1 %0, i1* %3
-  %4 = load i1, i1* %3
-  br i1 %4, label %5, label %6
-5:
+define void @printBool(i1 %r0) {
+  br label %L2
+L2:
+  br i1 %r0, label %L5, label %L6
+L5:
   call void @printString(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.2, i32 0, i32 0))
-  br label %7
-6:
+  br label %L7
+L6:
   call void @printString(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.3, i32 0, i32 0))
-  br label %7
-7:
+  br label %L7
+L7:
   ret void
 }
 
-define i1 @implies(i1 %0, i1 %1) {
-  br label %3
-3:
-  %4 = alloca i1
-  store i1 %0, i1* %4
-  %5 = alloca i1
-  store i1 %1, i1* %5
-  %6 = load i1, i1* %4
-  %7 = xor i1 %6, true
-  br i1 %7, label %12, label %8
-8:
-  %9 = load i1, i1* %4
-  %10 = load i1, i1* %5
-  %11 = icmp eq i1 %9, %10
-  br label %12
-12:
-  %13 = phi i1 [ true, %3 ], [ %11, %8 ]
-  ret i1 %13
+define i1 @implies(i1 %r0, i1 %r1) {
+  br label %L3
+L3:
+  %r7 = xor i1 %r0, true
+  br i1 %r7, label %L12, label %L8
+L8:
+  %r11 = icmp eq i1 %r0, %r1
+  br label %L12
+L12:
+  %r13 = phi i1 [ %r11, %L8 ], [ true, %L3 ]
+  ret i1 %r13
 }
 
