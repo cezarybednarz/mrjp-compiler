@@ -209,7 +209,13 @@ printLLBlocks first (block:blocks) = do
   let blockStmts = Prelude.map printStmt (reverse stmts) 
   let nextBlockStmts = printLLBlocks False blocks
   if not first then
-    showLabel (bLabel block) : blockStmts ++ nextBlockStmts
+    (showLabel (bLabel block) 
+    ++ 
+    "                              ; preds = " 
+    ++ 
+    show (bInBlocks block)) 
+    : 
+    blockStmts ++ nextBlockStmts
   else
     blockStmts ++ nextBlockStmts
 

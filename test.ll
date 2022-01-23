@@ -9,19 +9,19 @@ declare i8* @__concatStrings__(i8*, i8*)
 
 define i32 @main() {
   br label %L1
-L1:
+L1:                              ; preds = [L0]
   br label %L6
-L6:
-  %r8 = icmp sgt i32 %r5, 0
+L6:                              ; preds = [L1,L9]
+  %r19 = phi i32 [ %r19, %L9 ], [ 1, %L1 ]
+  %r18 = phi i32 [ %r18, %L9 ], [ %r5, %L1 ]
+  %r8 = icmp sgt i32 %r18, 0
   br i1 %r8, label %L9, label %L15
-L9:
-  %r19 = phi i32 [ %r5, %L6 ], [ %r5, %L6 ]
-  %r18 = phi i32 [ 1, %L6 ], [ 1, %L6 ]
-  %r12 = mul i32 %r18, %r19
-  %r14 = sub i32 %r19, 1
+L9:                              ; preds = [L6]
+  %r12 = mul i32 %r19, %r18
+  %r14 = sub i32 %r18, 1
   br label %L6
-L15:
-  call void @printInt(i32 1)
+L15:                              ; preds = [L6]
+  call void @printInt(i32 %r19)
   ret i32 0
 }
 

@@ -56,6 +56,13 @@ getBlock label = do
   let (Just block) = Map.lookup label (fBlocks function)
   return block
 
+setBlock :: Label -> LLBlock -> OM () 
+setBlock label block = do
+  fn <- getCurrentFn
+  let newBlocks = Map.insert label block (fBlocks fn)
+  setCurrentFn $ fn { fBlocks = newBlocks }
+  return ()
+
 getBlockPhis :: Label -> OM (Map.Map Reg (LLVM.Type, [(Val, Label)]))
 getBlockPhis label = do
   block <- getBlock label
@@ -65,6 +72,7 @@ putEmptyPhiForBlock :: Label -> LLVM.Type -> Reg -> OM ()
 putEmptyPhiForBlock label t reg = do
   b <- getBlock label
   f <- getCurrentFn
+  --debugString $ ">>> putting phi " ++ show reg ++ " for block " ++ show label
   state <- get
   let block = b { bPhis = Map.insert reg (t, []) (bPhis b) }
   let newFunction = f { fBlocks = Map.insert label block (fBlocks f) }
@@ -113,12 +121,13 @@ runOptimization = do
   newProgram <- getNewProgram
   optimizedFunctions <- optimizeFns (pFunctions newProgram)
   setNewProgram (newProgram { pFunctions = optimizedFunctions })
+  --debugString $ show newProgram
   gets sNewProgram
 
 -- functions for optimizing structures in LLVM --
 optimizeStmt :: Label -> LLVMStmt -> OM (Maybe LLVMStmt)
 optimizeStmt label llvmstmt = do
-  debugString $ "  " ++ show llvmstmt
+ --debugString $ "  " ++ show llvmstmt
   case llvmstmt of
     (Call r1 t1 s1 ts) -> do
       ts' <- optimizeArgsList label ts
@@ -143,10 +152,9 @@ optimizeStmt label llvmstmt = do
     (Load r1 t1 t2 r2) -> do
       r2Val' <- readVal (TypeVal t1 (VReg r2)) label
       writeVariable r1 label (TypeVal t1 r2Val')
-      debugString $ "r1: " ++ show r1
-      debugString $ "r2: " ++ show r2
-      debugString $ "r2Val: " ++ show r1
-
+      --debugString $ "r1: " ++ show r1
+      --debugString $ "r2: " ++ show r2
+      --debugString $ "r2Val: " ++ show r1
       return Nothing
     (Store t1 v1 t2 r) -> do
       writeVariable r label (TypeVal t1 v1)
@@ -190,26 +198,26 @@ optimizeBackendPhis label block = do
   let phis = Prelude.zip phiTypes phiRegs
   mapM_ (\(t, r) -> writeVariable r label (TypeVal t (VReg r))) phis
 
-optimizeBlock :: LLBlock -> OM LLBlock
-optimizeBlock block = do
-  debugString $ show $ bLabel block
-  debugString $ show $ bInBlocks block
+optimizeBlock :: Label -> OM ()
+optimizeBlock label = do
+  block <- getBlock label
+  --debugString $ show $ bLabel block
+  --debugString $ show $ bInBlocks block
   let stmts = bStmts block
-  let label = bLabel block
   optimizeBackendPhis label block
   newStmts <- optimizeStmtsList label stmts
   newPhis <- getBlockPhis label
-  return $ block { bStmts = newStmts, bPhis = newPhis }
+  setBlock label (block { bStmts = newStmts, bPhis = newPhis })
 
 optimizeCurrFn :: OM ()
 optimizeCurrFn = do
   clearCurrentDef
   fn <- getCurrentFn
-  debugString $ "function " ++ fName fn ++ "()"
-  let (labels, blocks) = Prelude.unzip $ Map.toList $ fBlocks fn
-  newBlocks <- mapM optimizeBlock blocks
-  setCurrentFn $ fn { fBlocks = Map.fromList (Prelude.zip labels newBlocks)}
-  return ()
+  --debugString $ "function " ++ fName fn ++ "()"
+  let (labels, _) = Prelude.unzip $ Map.toList $ fBlocks fn
+  mapM_ optimizeBlock labels
+  --debugFn <- getCurrentFn 
+  --debugPhisFn fn
 
 optimizeFns :: [Fn] -> OM [Fn]
 optimizeFns [] = return []
@@ -269,7 +277,7 @@ readVariableRecursive t reg label = do
       --debugString $ "reg: " ++ show reg
       --debugString $ "regPhi: " ++ show regPhi
       putEmptyPhiForBlock label t regPhi
-      writeVariable reg label (TypeVal t (VReg regPhi)) 
+      writeVariable reg label (TypeVal t (VReg regPhi))
       addPhiOperands regPhi label (TypeVal t (VReg reg))
   writeVariable reg label val
   return val
@@ -299,9 +307,13 @@ debugString :: String -> OM ()
 debugString str = do
   liftIO $ print str
 
-debugPhis :: OM ()
-debugPhis = do
-  fn <- getCurrentFn
+
+showPhisBlock :: LLBlock -> String
+showPhisBlock block = do
+  show (bLabel block) ++ ": "
+  ++ "  " ++ show (bPhis block)
+
+debugPhisFn :: Fn -> OM ()
+debugPhisFn fn = do
   let blocks = fBlocks fn
-  liftIO $ print "phis in current fn:"
-  mapM_ (liftIO . print . bPhis) blocks
+  mapM_ (liftIO . print . showPhisBlock) blocks
