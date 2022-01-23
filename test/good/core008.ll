@@ -8,18 +8,11 @@ declare i8* @__concatStrings__(i8*, i8*)
 @.str.0 = private unnamed_addr constant [1 x i8] c"\00", align 1
 
 define i32 @main() {
-  br label %1
-1:
-  %2 = alloca i32
-  store i32 0, i32* %2
-  %3 = alloca i32
-  store i32 7, i32* %3
-  %4 = sub i32 0, 1234234
-  store i32 %4, i32* %2
-  %5 = load i32, i32* %2
-  call void @printInt(i32 %5)
-  %6 = load i32, i32* %3
-  call void @printInt(i32 %6)
+  br label %L1
+L1:
+  %r4 = sub i32 0, 1234234
+  call void @printInt(i32 %r5)
+  call void @printInt(i32 %r6)
   ret i32 0
 }
 

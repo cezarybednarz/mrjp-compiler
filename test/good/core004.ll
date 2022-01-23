@@ -8,14 +8,14 @@ declare i8* @__concatStrings__(i8*, i8*)
 @.str.0 = private unnamed_addr constant [1 x i8] c"\00", align 1
 
 define i32 @main() {
-  br label %1
-1:
-  %2 = icmp eq i1 true, true
-  br i1 %2, label %3, label %4
-3:
+  br label %L1
+L1:
+  %r2 = icmp eq i1 true, true
+  br i1 %r2, label %L3, label %L4
+L3:
   call void @printInt(i32 42)
-  br label %4
-4:
+  br label %L4
+L4:
   ret i32 0
 }
 

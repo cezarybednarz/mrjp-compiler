@@ -118,7 +118,7 @@ optimizeStmt label llvmstmt = do
     (Call r1 t1 s1 ts) -> do
       ts' <- optimizeArgsList label ts
       writeVariable r1 label (TypeVal t1 (VReg r1))
-      return $ Just (Call r1 t1 s1 ts)
+      return $ Just (Call r1 t1 s1 ts')
     (CallVoid t1 s1 ts) -> do
       ts' <- optimizeArgsList label ts
       return $ Just (CallVoid t1 s1 ts')

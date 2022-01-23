@@ -8,26 +8,26 @@ declare i8* @__concatStrings__(i8*, i8*)
 @.str.0 = private unnamed_addr constant [1 x i8] c"\00", align 1
 
 define i32 @f() {
-  br label %1
-1:
+  br label %L1
+L1:
   ret i32 0
 }
 
 define i32 @g() {
-  br label %1
-1:
+  br label %L1
+L1:
   ret i32 0
 }
 
 define void @p() {
-  br label %1
-1:
+  br label %L1
+L1:
   ret void
 }
 
 define i32 @main() {
-  br label %1
-1:
+  br label %L1
+L1:
   call void @p()
   ret i32 0
 }

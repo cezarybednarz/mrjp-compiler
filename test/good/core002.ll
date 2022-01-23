@@ -9,15 +9,15 @@ declare i8* @__concatStrings__(i8*, i8*)
 @.str.0 = private unnamed_addr constant [1 x i8] c"\00", align 1
 
 define i32 @main() {
-  br label %1
-1:
+  br label %L1
+L1:
   call void @foo()
   ret i32 0
 }
 
 define void @foo() {
-  br label %1
-1:
+  br label %L1
+L1:
   call void @printString(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i32 0, i32 0))
   ret void
 }
