@@ -74,6 +74,8 @@ data LLVMProgram = LLVMProgram {
   pCurrReg :: Reg,
   pFunctions :: [Fn]
 }
+  deriving (Show, Eq, Ord)
+
 
 -- show for llvm types --
 
