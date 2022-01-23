@@ -105,22 +105,26 @@ runMem2Reg llvmProgram =
 -- run optimization -- 
 runOptimization :: OM LLVMProgram
 runOptimization = do
-  state <- get
   newProgram <- getNewProgram
   optimizedFunctions <- optimizeFns (pFunctions newProgram)
   setNewProgram (newProgram { pFunctions = optimizedFunctions })
-  return $ sNewProgram state
+  gets sNewProgram
 
 -- functions for optimizing structures in LLVM --
 optimizeStmt :: Label -> LLVMStmt -> OM (Maybe LLVMStmt)
 optimizeStmt label llvmstmt = do
-  --debugString $ show llvmstmt
+  -- debugString $ "  " ++ show llvmstmt
   case llvmstmt of
     (Call r1 t1 s1 ts) -> do
+      ts' <- optimizeArgsList label ts
       writeVariable r1 label (TypeVal t1 (VReg r1))
-      return $ Just (Call r1 t1 s1 ts)
-    (CallVoid t1 s1 ts) -> return $ Just (CallVoid t1 s1 ts)
-    (LLVM.Ret t1 v1) -> return $ Just (LLVM.Ret t1 v1)
+      return $ Just (Call r1 t1 s1 ts) 
+    (CallVoid t1 s1 ts) -> do
+      ts' <- optimizeArgsList label ts 
+      return $ Just (CallVoid t1 s1 ts') 
+    (LLVM.Ret t1 v1) -> do
+      v1' <- readVal (TypeVal t1 v1) label
+      return $ Just (LLVM.Ret t1 v1')
     RetVoid -> return $ Just RetVoid
     (Arithm r1 t1 v1 v2 op) -> do
       v1' <- readVal (TypeVal t1 v1) label
@@ -134,11 +138,11 @@ optimizeStmt label llvmstmt = do
     (Load r1 t1 t2 r2) -> do
       r2Val' <- readVal (TypeVal t1 (VReg r2)) label
       writeVariable r1 label (TypeVal t1 r2Val')
-      return $ Just (Load r1 t1 t2 r2)
+      return Nothing
     (Store t1 v1 t2 r) -> do
       writeVariable r label (TypeVal t1 v1)
-      return Nothing 
-    Alloca {} -> return Nothing 
+      return Nothing
+    Alloca {} -> return Nothing
     (Cmp r1 c1 t1 v1 v2) -> do
       v1' <- readVal (TypeVal t1 v1) label
       v2' <- readVal (TypeVal t1 v2) label
@@ -150,6 +154,13 @@ optimizeStmt label llvmstmt = do
       writeVariable r1 label (TypeVal t1 (VReg r1))
       return $ Just (Xor r1 t1 v1' v2')
     Phi {} -> return Nothing -- phis are stored in map inside block
+
+optimizeArgsList :: Label -> [(LLVM.Type, Val)] -> OM [(LLVM.Type, Val)]
+optimizeArgsList label [] = return []
+optimizeArgsList label ((t, val):args) = do
+  val' <- readVal (TypeVal t val) label
+  optimizedArgsList <- optimizeArgsList label args 
+  return $ (t, val) : optimizedArgsList
 
 optimizeStmtsList :: Label -> [LLVMStmt] -> OM [LLVMStmt]
 optimizeStmtsList _ [] = return []
@@ -164,15 +175,17 @@ optimizeStmtsList label (stmt:stmts) = do
 
 optimizeBlock :: LLBlock -> OM LLBlock
 optimizeBlock block = do
+  -- debugString "-----"
   let stmts = bStmts block
   let label = bLabel block
   newStmts <- optimizeStmtsList label stmts
-  return $ block { bStmts = reverse newStmts }
+  return $ block { bStmts = newStmts }
 
 optimizeCurrFn :: OM ()
 optimizeCurrFn = do
   clearCurrentDef
   fn <- getCurrentFn
+  -- debugString $ "function " ++ fName fn ++ "()"
   let (labels, blocks) = Prelude.unzip $ Map.toList $ fBlocks fn
   newBlocks <- mapM optimizeBlock blocks
   setCurrentFn $ fn { fBlocks = Map.fromList (Prelude.zip labels newBlocks)}
