@@ -56,6 +56,11 @@ getBlock label = do
   let (Just block) = Map.lookup label (fBlocks function)
   return block
 
+getBlockPhis :: Label -> OM (Map.Map Reg (LLVM.Type, [(Val, Label)]))
+getBlockPhis label = do
+  block <- getBlock label
+  return $ bPhis block
+
 putEmptyPhiForBlock :: Label -> LLVM.Type -> Reg -> OM ()
 putEmptyPhiForBlock label t reg = do
   b <- getBlock label
@@ -113,7 +118,7 @@ runOptimization = do
 -- functions for optimizing structures in LLVM --
 optimizeStmt :: Label -> LLVMStmt -> OM (Maybe LLVMStmt)
 optimizeStmt label llvmstmt = do
-  --debugString $ "  " ++ show llvmstmt
+  debugString $ "  " ++ show llvmstmt
   case llvmstmt of
     (Call r1 t1 s1 ts) -> do
       ts' <- optimizeArgsList label ts
@@ -183,18 +188,19 @@ optimizeBackendPhis label block = do
 
 optimizeBlock :: LLBlock -> OM LLBlock
 optimizeBlock block = do
-  --debugString "-----"
+  debugString "-----"
   let stmts = bStmts block
   let label = bLabel block
   optimizeBackendPhis label block
   newStmts <- optimizeStmtsList label stmts
-  return $ block { bStmts = newStmts }
+  newPhis <- getBlockPhis label
+  return $ block { bStmts = newStmts, bPhis = newPhis }
 
 optimizeCurrFn :: OM ()
 optimizeCurrFn = do
   clearCurrentDef
   fn <- getCurrentFn
-  --debugString $ "function " ++ fName fn ++ "()"
+  debugString $ "function " ++ fName fn ++ "()"
   let (labels, blocks) = Prelude.unzip $ Map.toList $ fBlocks fn
   newBlocks <- mapM optimizeBlock blocks
   setCurrentFn $ fn { fBlocks = Map.fromList (Prelude.zip labels newBlocks)}
@@ -234,7 +240,6 @@ readVal (TypeVal t val) label = do
 -- read register from block (from modern SSA algorithm) --
 readVariable :: LLVM.Type -> Reg -> Label -> OM TypeVal
 readVariable t reg label = do
-  --debugState
   state <- get
   let currentDef = sCurrentDef state
   case Map.lookup reg currentDef of
@@ -257,8 +262,8 @@ readVariableRecursive t reg label = do
     inBlockLabels -> do
       regPhi <- newRegister
       putEmptyPhiForBlock label t regPhi
-      writeVariable reg label (TypeVal t (VReg regPhi))
-      addPhiOperands reg label (TypeVal t (VReg regPhi))
+      writeVariable regPhi label (TypeVal t (VReg reg))
+      addPhiOperands regPhi label (TypeVal t (VReg reg))
   writeVariable reg label val
   return val
 
@@ -285,3 +290,10 @@ debugState = do
 debugString :: String -> OM ()
 debugString str = do
   liftIO $ print str
+
+debugPhis :: OM ()
+debugPhis = do
+  fn <- getCurrentFn
+  let blocks = fBlocks fn
+  liftIO $ print "phis in current fn:"
+  mapM_ (liftIO . print . bPhis) blocks
