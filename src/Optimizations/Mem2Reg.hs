@@ -127,7 +127,7 @@ runOptimization = do
 -- functions for optimizing structures in LLVM --
 optimizeStmt :: Label -> LLVMStmt -> OM (Maybe LLVMStmt)
 optimizeStmt label llvmstmt = do
- --debugString $ "  " ++ show llvmstmt
+  debugString $ "  " ++ show llvmstmt
   case llvmstmt of
     (Call r1 t1 s1 ts) -> do
       ts' <- optimizeArgsList label ts
@@ -157,7 +157,8 @@ optimizeStmt label llvmstmt = do
       --debugString $ "r2Val: " ++ show r1
       return Nothing
     (Store t1 v1 t2 r) -> do
-      writeVariable r label (TypeVal t1 v1)
+      v1' <- readVal (TypeVal t1 v1) label
+      writeVariable r label (TypeVal t1 v1')
       return Nothing
     Alloca {} -> return Nothing
     (Cmp r1 c1 t1 v1 v2) -> do
@@ -201,7 +202,7 @@ optimizeBackendPhis label block = do
 optimizeBlock :: Label -> OM ()
 optimizeBlock label = do
   block <- getBlock label
-  --debugString $ show $ bLabel block
+  debugString $ show $ bLabel block
   --debugString $ show $ bInBlocks block
   let stmts = bStmts block
   optimizeBackendPhis label block
@@ -213,7 +214,7 @@ optimizeCurrFn :: OM ()
 optimizeCurrFn = do
   clearCurrentDef
   fn <- getCurrentFn
-  --debugString $ "function " ++ fName fn ++ "()"
+  debugString $ "function " ++ fName fn ++ "()"
   let (labels, _) = Prelude.unzip $ Map.toList $ fBlocks fn
   mapM_ optimizeBlock labels
   --debugFn <- getCurrentFn 
@@ -267,34 +268,35 @@ readVariable t reg label = do
 
 -- read register recursively through predecessor blocks (from modern SSA algorithm) --
 readVariableRecursive :: LLVM.Type -> Reg -> Label -> OM TypeVal
-readVariableRecursive t reg label = do
+readVariableRecursive t variable label = do
   block <- getBlock label
   val <- case bInBlocks block of
     [inBlockLabel] -> do -- single predecessor, no phi
-      readVariable t reg inBlockLabel
+      readVariable t variable inBlockLabel
     inBlockLabels -> do
-      regPhi <- newRegister
-      --debugString $ "reg: " ++ show reg
-      --debugString $ "regPhi: " ++ show regPhi
-      putEmptyPhiForBlock label t regPhi
-      writeVariable reg label (TypeVal t (VReg regPhi))
-      addPhiOperands regPhi label (TypeVal t (VReg reg))
-  writeVariable reg label val
+      val <- newRegister
+      debugString $ "variable: " ++ show variable
+      debugString $ "val: " ++ show val
+      putEmptyPhiForBlock label t val
+      writeVariable variable label (TypeVal t (VReg val))
+      addPhiOperands variable label (TypeVal t (VReg val))
+      --return (TypeVal t (VReg val))
+  writeVariable variable label val
   return val
 
 -- add phi operand (from modern SSA algorithm)--
 addPhiOperands :: Reg -> Label -> TypeVal -> OM TypeVal
-addPhiOperands variable label (TypeVal t valPhi) = do
+addPhiOperands variable label (TypeVal t val) = do
   block <- getBlock label
   let preds = bInBlocks block
-  mapM_ (appendOperands label variable (TypeVal t valPhi)) preds
-  return (TypeVal t (VReg variable))
+  mapM_ (appendOperands label variable (TypeVal t val)) preds
+  return (TypeVal t val)
 
 -- helper function for addPhiOperands --
 appendOperands :: Label -> Reg -> TypeVal -> Label -> OM ()
-appendOperands label variable (TypeVal t val) label2 = do
-  val' <- readVal (TypeVal t val) label2
-  putPhiForBlock label t variable (val', label2)
+appendOperands label variable (TypeVal t (VReg val)) label2 = do
+  TypeVal _ variable' <- readVariable t variable label2
+  putPhiForBlock label t val (variable', label2)
 
 -- ! debug functions 
 
