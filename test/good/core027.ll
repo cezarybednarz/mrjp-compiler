@@ -11,14 +11,14 @@ declare i8* @__concatStrings__(i8*, i8*)
 
 define i32 @main() {
   br label %L1
-L1:
+L1:                              ; preds = [L0]
   call void @f(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i32 0, i32 0))
   ret i32 0
 }
 
 define void @f(i8* %r0) {
   br label %L2
-L2:
+L2:                              ; preds = [L0]
   call void @printString(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.2, i32 0, i32 0))
   ret void
 }

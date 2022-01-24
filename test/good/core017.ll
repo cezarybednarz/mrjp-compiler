@@ -12,70 +12,71 @@ declare i8* @__concatStrings__(i8*, i8*)
 
 define i32 @main() {
   br label %L1
-L1:
+L1:                              ; preds = [L0]
   %r4 = icmp sle i32 3, 4
   %r5 = xor i1 %r4, true
   br i1 %r5, label %L15, label %L6
-L6:
+L6:                              ; preds = [L1]
   %r7 = icmp ne i32 4, 2
   %r8 = xor i1 %r7, true
   br i1 %r8, label %L11, label %L9
-L9:
+L9:                              ; preds = [L6]
   %r10 = xor i1 true, true
   br label %L11
-L11:
+L11:                              ; preds = [L6]
   %r12 = phi i1 [ %r10, %L9 ], [ true, %L6 ]
   %r13 = xor i1 %r12, true
   %r14 = xor i1 %r13, true
   br label %L15
-L15:
+L15:                              ; preds = [L1]
   %r16 = phi i1 [ %r14, %L11 ], [ true, %L1 ]
   %r17 = xor i1 %r16, true
   br i1 %r17, label %L18, label %L19
-L18:
+L18:                              ; preds = [L15]
   call void @printBool(i1 true)
   br label %L20
-L19:
+L19:                              ; preds = [L15]
   call void @printString(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i32 0, i32 0))
   br label %L20
-L20:
+L20:                              ; preds = [L19,L18]
+  %r56 = phi i32 [ 4, %L18 ], [ 4, %L19 ]
   %r21 = icmp eq i1 true, true
   br i1 %r21, label %L24, label %L22
-L22:
+L22:                              ; preds = [L20]
   %r23 = call i1 @dontCallMe(i32 1)
   br label %L24
-L24:
+L24:                              ; preds = [L20]
   %r25 = phi i1 [ %r23, %L22 ], [ true, %L20 ]
   call void @printBool(i1 %r25)
   %r26 = sub i32 0, 5
   %r27 = icmp slt i32 4, %r26
   %r28 = xor i1 %r27, true
   br i1 %r28, label %L32, label %L29
-L29:
+L29:                              ; preds = [L24]
   %r30 = call i1 @dontCallMe(i32 2)
   %r31 = xor i1 %r30, true
   br label %L32
-L32:
+L32:                              ; preds = [L24]
   %r33 = phi i1 [ %r31, %L29 ], [ true, %L24 ]
   %r34 = xor i1 %r33, true
   call void @printBool(i1 %r34)
-  %r36 = icmp eq i32 4, %r15
+  %r36 = icmp eq i32 4, %r56
   %r37 = xor i1 %r36, true
   br i1 %r37, label %L48, label %L38
-L38:
+L38:                              ; preds = [L32]
   %r39 = xor i1 false, true
   %r40 = icmp eq i1 true, %r39
   %r41 = xor i1 %r40, true
   br i1 %r41, label %L44, label %L42
-L42:
+L42:                              ; preds = [L38]
   %r43 = xor i1 true, true
   br label %L44
-L44:
+L44:                              ; preds = [L38]
   %r45 = phi i1 [ %r43, %L42 ], [ true, %L38 ]
   %r46 = xor i1 %r45, true
   %r47 = xor i1 %r46, true
   br label %L48
-L48:
+L48:                              ; preds = [L32]
   %r49 = phi i1 [ %r47, %L44 ], [ true, %L32 ]
   %r50 = xor i1 %r49, true
   call void @printBool(i1 %r50)
@@ -92,34 +93,34 @@ L48:
 
 define i1 @dontCallMe(i32 %r0) {
   br label %L2
-L2:
+L2:                              ; preds = [L0]
   call void @printInt(i32 %r0)
   ret i1 true
 }
 
 define void @printBool(i1 %r0) {
   br label %L2
-L2:
+L2:                              ; preds = [L0]
   br i1 %r0, label %L5, label %L6
-L5:
+L5:                              ; preds = [L2]
   call void @printString(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.2, i32 0, i32 0))
   br label %L7
-L6:
+L6:                              ; preds = [L2]
   call void @printString(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.3, i32 0, i32 0))
   br label %L7
-L7:
+L7:                              ; preds = [L6,L5]
   ret void
 }
 
 define i1 @implies(i1 %r0, i1 %r1) {
   br label %L3
-L3:
+L3:                              ; preds = [L0]
   %r7 = xor i1 %r0, true
   br i1 %r7, label %L12, label %L8
-L8:
+L8:                              ; preds = [L3]
   %r11 = icmp eq i1 %r0, %r1
   br label %L12
-L12:
+L12:                              ; preds = [L3]
   %r13 = phi i1 [ %r11, %L8 ], [ true, %L3 ]
   ret i1 %r13
 }

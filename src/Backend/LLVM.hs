@@ -48,7 +48,8 @@ data LLBlock = LLBlock { bLabel :: Label,
 data Fn = Fn { fType   :: Type,
                fName   :: String,
                fArgs   :: [(Type, String)],
-               fBlocks :: Map.Map Label LLBlock }
+               fBlocks :: Map.Map Label LLBlock, 
+               fMaxRegister :: Reg}
   deriving (Eq, Ord, Show)
 
 data Cond = RelEQ

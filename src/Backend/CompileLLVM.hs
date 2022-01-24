@@ -77,6 +77,13 @@ getCurrFnType = do
   let t = fType f
   return t
 
+setCurrFnMaxRegister :: Reg -> CM ()
+setCurrFnMaxRegister reg = do
+  state <- get
+  let f:functions = sFunctions state
+  let newF = f { fMaxRegister = reg }
+  put $ state { sFunctions = newF:functions }
+
 getFnType :: String -> CM LLVM.Type
 getFnType name = do
   state <- get
@@ -189,7 +196,8 @@ emitFunction label t name args = do
     fType = t,
     fName = name,
     fArgs = args,
-    fBlocks = Map.empty
+    fBlocks = Map.empty,
+    fMaxRegister = Reg 0
   }
   put $ state {
     sFunctions = function:functions,
@@ -326,6 +334,11 @@ compileTopDef (FnDef line t id args b) = do
         emitStmt $ LLVM.Ret Ti1 VFalse
       (Ptr Ti8) -> do
         emitStmt $ LLVM.Ret (Ptr Ti8) (VGetElementPtr 0 1 "")
+  reg <- getRegister 
+  --debugString $ show id
+  --debugString $ show reg
+  setCurrFnMaxRegister reg
+  
 
 -- compile list of expressions to val --
 compileExprList :: [Expr] -> CM [Val]

@@ -9,7 +9,7 @@ declare i8* @__concatStrings__(i8*, i8*)
 
 define i32 @main() {
   br label %L1
-L1:
+L1:                              ; preds = [L0]
   %r2 = sub i32 0, 42
   %r3 = sub i32 0, 1
   %r4 = sdiv i32 %r2, %r3

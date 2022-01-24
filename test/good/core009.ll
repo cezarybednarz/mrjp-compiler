@@ -9,7 +9,7 @@ declare i8* @__concatStrings__(i8*, i8*)
 
 define i32 @main() {
   br label %L1
-L1:
+L1:                              ; preds = [L0]
   %r2 = call i32 @foo()
   call void @printInt(i32 %r2)
   ret i32 0
@@ -17,7 +17,7 @@ L1:
 
 define i32 @foo() {
   br label %L1
-L1:
+L1:                              ; preds = [L0]
   ret i32 10
 }
 

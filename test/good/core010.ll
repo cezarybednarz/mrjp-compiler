@@ -9,7 +9,7 @@ declare i8* @__concatStrings__(i8*, i8*)
 
 define i32 @main() {
   br label %L1
-L1:
+L1:                              ; preds = [L0]
   %r2 = call i32 @fac(i32 5)
   call void @printInt(i32 %r2)
   ret i32 0
@@ -17,18 +17,18 @@ L1:
 
 define i32 @fac(i32 %r0) {
   br label %L2
-L2:
+L2:                              ; preds = [L0]
   br label %L7
-L7:
-  %r9 = icmp sgt i32 %r6, 0
+L7:                              ; preds = [L2,L10]
+  %r20 = phi i32 [ %r13, %L10 ], [ 1, %L2 ]
+  %r19 = phi i32 [ %r15, %L10 ], [ %r0, %L2 ]
+  %r9 = icmp sgt i32 %r19, 0
   br i1 %r9, label %L10, label %L16
-L10:
-  %r20 = phi i32 [ %r6, %L7 ], [ %r6, %L7 ]
-  %r19 = phi i32 [ 1, %L7 ], [ 1, %L7 ]
-  %r13 = mul i32 %r19, %r20
-  %r15 = sub i32 %r20, 1
+L10:                              ; preds = [L7]
+  %r13 = mul i32 %r20, %r19
+  %r15 = sub i32 %r19, 1
   br label %L7
-L16:
-  ret i32 1
+L16:                              ; preds = [L7]
+  ret i32 %r20
 }
 

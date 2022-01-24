@@ -9,7 +9,7 @@ declare i8* @__concatStrings__(i8*, i8*)
 
 define i32 @main() {
   br label %L1
-L1:
+L1:                              ; preds = [L0]
   %r2 = call i32 @readInt()
   %r4 = call i8* @readString()
   %r6 = call i8* @readString()

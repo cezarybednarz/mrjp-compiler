@@ -9,20 +9,20 @@ declare i8* @__concatStrings__(i8*, i8*)
 
 define i32 @d() {
   br label %L1
-L1:
+L1:                              ; preds = [L0]
   ret i32 0
 }
 
 define i32 @s(i32 %r0) {
   br label %L2
-L2:
+L2:                              ; preds = [L0]
   %r5 = add i32 %r0, 1
   ret i32 %r5
 }
 
 define i32 @main() {
   br label %L1
-L1:
+L1:                              ; preds = [L0]
   %r2 = call i32 @d()
   %r3 = call i32 @s(i32 %r2)
   %r4 = call i32 @s(i32 %r3)

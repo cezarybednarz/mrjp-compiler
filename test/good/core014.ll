@@ -9,20 +9,21 @@ declare i8* @__concatStrings__(i8*, i8*)
 
 define i32 @main() {
   br label %L1
-L1:
+L1:                              ; preds = [L0]
   call void @printInt(i32 1)
   br label %L7
-L7:
-  %r10 = icmp slt i32 %r5, 5000000
+L7:                              ; preds = [L1,L11]
+  %r23 = phi i32 [ %r18, %L11 ], [ 1, %L1 ]
+  %r22 = phi i32 [ %r22, %L11 ], [ 5000000, %L1 ]
+  %r21 = phi i32 [ %r15, %L11 ], [ 1, %L1 ]
+  %r10 = icmp slt i32 %r21, %r22
   br i1 %r10, label %L11, label %L19
-L11:
-  %r22 = phi i32 [ 1, %L7 ], [ 1, %L7 ]
-  %r21 = phi i32 [ %r5, %L7 ], [ %r5, %L7 ]
+L11:                              ; preds = [L7]
   call void @printInt(i32 %r21)
-  %r15 = add i32 %r22, %r21
-  %r18 = sub i32 %r15, %r22
+  %r15 = add i32 %r23, %r21
+  %r18 = sub i32 %r15, %r23
   br label %L7
-L19:
+L19:                              ; preds = [L7]
   ret i32 0
 }
 

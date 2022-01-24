@@ -9,13 +9,13 @@ declare i8* @__concatStrings__(i8*, i8*)
 
 define i32 @main() {
   br label %L1
-L1:
+L1:                              ; preds = [L0]
   %r2 = icmp eq i1 true, true
   br i1 %r2, label %L3, label %L4
-L3:
+L3:                              ; preds = [L1]
   call void @printInt(i32 42)
   br label %L4
-L4:
+L4:                              ; preds = [L3,L1]
   ret i32 0
 }
 
