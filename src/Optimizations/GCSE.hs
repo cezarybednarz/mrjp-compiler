@@ -234,8 +234,8 @@ optimizeBlock :: LLBlock -> OM LLBlock
 optimizeBlock block = do
   let stmts = bStmts block
   let label = bLabel block
-  newStmts <- optimizeBlockStmts label stmts
-  return $ block {bStmts = newStmts}
+  newStmts <- optimizeBlockStmts label (reverse stmts)
+  return $ block {bStmts = reverse newStmts}
 
 optimizeBlockStmts :: Label -> [LLVMStmt] -> OM [LLVMStmt]
 optimizeBlockStmts _ [] = return []
