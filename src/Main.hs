@@ -9,6 +9,7 @@ import           System.Exit          (exitFailure, exitSuccess)
 import           System.IO            (hPutStrLn, putStrLn, stderr)
 import Backend.Run
 import Optimizations.Mem2Reg
+import Optimizations.GCSE
 import Backend.LLVM
 
 
@@ -38,4 +39,6 @@ main = do
               (Right llvmProgram, _) <- runCompilation tree
               (llvmProgram, _) <- runMem2Reg llvmProgram
               (llvmProgram, _) <- runTrivialPhiReduction llvmProgram
+              (llvmProgram, _) <- runGCSE llvmProgram
+              -- todo runTrivialPhiReduction
               putStrLn $ unlines $ printLLVMProgram (pStrConstants llvmProgram) (pFunctions llvmProgram)

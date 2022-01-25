@@ -1,5 +1,10 @@
 
 int ifac2f(int l, int h) {
+  while(true) {
+    while(true) {
+      printString("infinite");
+    }
+  }
   if (l == h)
     return l;
   if (l > h)
