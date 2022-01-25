@@ -3,13 +3,13 @@ module Backend.CompileLLVM where
 import           Control.Monad.Except
 import           Control.Monad.Reader
 import           Control.Monad.State
-import           Data.Map             as Map
+import           Data.Map              as Map
 
 import           Backend.Environment
-import           Backend.LLVM         as LLVM
+import           Backend.LLVM          as LLVM
 import           Common.Runtime
-import           Latte.Abs            as Latte
-import Optimizations.Mem2Reg 
+import           Latte.Abs             as Latte
+import           Optimizations.Mem2Reg
 
 -- function for starting compilation and optimization --
 runBackend :: Program -> CM LLVMProgram
@@ -109,9 +109,9 @@ getLabel :: CM Label
 getLabel = do
   gets sCurrLabel
 
-putInBlockForBlock :: Label -> Label -> CM () 
+putInBlockForBlock :: Label -> Label -> CM ()
 putInBlockForBlock targetLabel label = do
-  state <- get 
+  state <- get
   let f:functions = sFunctions state
   let (Just b) = Map.lookup targetLabel (fBlocks f)
   let inBlocks = bInBlocks b
@@ -122,11 +122,11 @@ putInBlockForBlock targetLabel label = do
 
 putPhiForBlock :: Label -> Reg -> LLVM.Type -> (Val, Label) -> CM ()
 putPhiForBlock label reg t phiVal = do
-  state <- get 
+  state <- get
   let f:functions = sFunctions state
   let (Just b) = Map.lookup label (fBlocks f)
   let phis = case Map.lookup reg (bPhis b) of
-        Nothing -> []
+        Nothing        -> []
         (Just (_, ps)) -> ps
   let block = b { bPhis = Map.insert reg (t, phiVal:phis) (bPhis b)}
   let function = f { fBlocks = Map.insert label block (fBlocks f) }
@@ -334,11 +334,11 @@ compileTopDef (FnDef line t id args b) = do
         emitStmt $ LLVM.Ret Ti1 VFalse
       (Ptr Ti8) -> do
         emitStmt $ LLVM.Ret (Ptr Ti8) (VGetElementPtr 0 1 "")
-  reg <- getRegister 
+  reg <- getRegister
   --debugString $ show id
   --debugString $ show reg
   setCurrFnMaxRegister reg
-  
+
 
 -- compile list of expressions to val --
 compileExprList :: [Expr] -> CM [Val]
@@ -423,7 +423,7 @@ compileExpr (EOr _ expr1 expr2) = do
   putInBlockForBlock lTrue lFalse2
   emitNewBlock lTrue
   emitStmtForLabel (BrCond Ti1 e1 lTrue lFalse) lStart
-  putInBlockForBlock lTrue lStart 
+  putInBlockForBlock lTrue lStart
   putInBlockForBlock lFalse lStart
   reg <- newRegister
   --emitStmt $ Phi reg Ti1 [(VTrue, lStart), (e2, lFalse2)]

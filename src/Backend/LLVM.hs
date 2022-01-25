@@ -39,17 +39,17 @@ data LLVMStmt = Call Reg Type String [(Type, Val)]
               | Phi Reg Type [(Val, Label)]
   deriving (Eq, Ord)
 
-data LLBlock = LLBlock { bLabel :: Label,
-                         bStmts :: [LLVMStmt],
-                         bPhis :: Map.Map Reg (Type, [(Val, Label)]),
+data LLBlock = LLBlock { bLabel    :: Label,
+                         bStmts    :: [LLVMStmt],
+                         bPhis     :: Map.Map Reg (Type, [(Val, Label)]),
                          bInBlocks :: [Label]
                   }
   deriving (Eq, Ord, Show)
 
-data Fn = Fn { fType   :: Type,
-               fName   :: String,
-               fArgs   :: [(Type, String)],
-               fBlocks :: Map.Map Label LLBlock, 
+data Fn = Fn { fType        :: Type,
+               fName        :: String,
+               fArgs        :: [(Type, String)],
+               fBlocks      :: Map.Map Label LLBlock,
                fMaxRegister :: Reg}
   deriving (Eq, Ord, Show)
 
@@ -73,8 +73,8 @@ data StrConstant = StrConstant Int Int String -- id length value
 
 data LLVMProgram = LLVMProgram {
   pStrConstants :: [StrConstant],
-  pCurrReg :: Reg,
-  pFunctions :: [Fn]
+  pCurrReg      :: Reg,
+  pFunctions    :: [Fn]
 }
   deriving (Show, Eq, Ord)
 
@@ -198,8 +198,8 @@ printStrConstants ((StrConstant id len str):strConstants) =
 
 convPhisToLLVMStmts :: [(Reg, (Type, [(Val, Label)]))] -> [LLVMStmt]
 convPhisToLLVMStmts [] = []
-convPhisToLLVMStmts ((reg, (t, phiVals)):phis) = 
-  Phi reg t phiVals 
+convPhisToLLVMStmts ((reg, (t, phiVals)):phis) =
+  Phi reg t phiVals
   :
   convPhisToLLVMStmts phis
 
@@ -208,15 +208,15 @@ printLLBlocks _ [] = []
 printLLBlocks first (block:blocks) = do
   let phis = bPhis block
   let stmts = bStmts block ++ convPhisToLLVMStmts (Map.toList phis)
-  let blockStmts = Prelude.map printStmt (reverse stmts) 
+  let blockStmts = Prelude.map printStmt (reverse stmts)
   let nextBlockStmts = printLLBlocks False blocks
   if not first then
-    (showLabel (bLabel block) 
-    ++ 
-    "                              ; preds = " 
-    ++ 
-    show (bInBlocks block)) 
-    : 
+    (showLabel (bLabel block)
+    ++
+    "                              ; preds = "
+    ++
+    show (bInBlocks block))
+    :
     blockStmts ++ nextBlockStmts
   else
     blockStmts ++ nextBlockStmts
@@ -261,4 +261,4 @@ printLLVMProgram strConstants fns =
   printStrConstants strConstants
   ++
   printFunctions (reverse fns)
-    
+

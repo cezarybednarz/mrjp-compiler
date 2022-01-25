@@ -2,11 +2,11 @@ module Backend.Run where
 
 import           Backend.CompileLLVM
 import           Backend.Environment
+import           Backend.LLVM         (LLVMProgram)
 import           Control.Monad.Except
 import           Control.Monad.Reader
 import           Control.Monad.State
 import           Latte.Abs
-import Backend.LLVM ( LLVMProgram )
 
 -- run Compiler Monad --
 runCM :: CM a -> CompilerState -> Env -> IO (Either String a, CompilerState)

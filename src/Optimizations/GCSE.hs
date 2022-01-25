@@ -1,25 +1,25 @@
 module Optimizations.GCSE (runGCSE) where
 
-import Latte.Abs as Latte
-import Backend.LLVM as LLVM
-import Control.Monad.State
-import Data.Map as Map
-import Data.Set as Set
-import Data.Foldable
+import           Backend.LLVM        as LLVM
+import           Control.Monad.State
+import           Data.Foldable
+import           Data.Map            as Map
+import           Data.Set            as Set
+import           Latte.Abs           as Latte
 
--- GCSE algorithm based on dominator tree -- 
+-- GCSE algorithm based on dominator tree --
 -- this algorithm also executes LCSE in basic blocks --
 
 data OptimizerState = OptimizerState {
-  sNewProgram :: LLVMProgram,
-  sCurrentFn :: Maybe Fn,
-  sRValMap :: Map.Map LLVMStmt (Label, Reg), -- RValues of expressions
+  sNewProgram    :: LLVMProgram,
+  sCurrentFn     :: Maybe Fn,
+  sRValMap       :: Map.Map LLVMStmt (Label, Reg), -- RValues of expressions
   sDominatorTree :: Map.Map Label (Set.Set Label),
-  sCurrentDef :: Map.Map Reg Reg -- values to assign optimized registers
+  sCurrentDef    :: Map.Map Reg Reg -- values to assign optimized registers
 }
   deriving (Show, Eq, Ord)
 
--- acessors to state -- 
+-- acessors to state --
 getNewProgram :: OM LLVMProgram
 getNewProgram =
   gets sNewProgram
@@ -117,7 +117,7 @@ clearDominatorTree = do
   state <- get
   put $ state { sDominatorTree = Map.empty }
 
-assignReg :: Reg -> Reg -> OM () 
+assignReg :: Reg -> Reg -> OM ()
 assignReg reg1 reg2 = do
   state <- get
   let currentDef = sCurrentDef state
@@ -128,15 +128,15 @@ getReg :: Reg -> OM (Maybe Reg)
 getReg reg = do
   state <- get
   let currentDef = sCurrentDef state
-  return $ Map.lookup reg currentDef 
+  return $ Map.lookup reg currentDef
 
 getVal :: Val -> OM Val
 getVal val = do
-  case val of 
+  case val of
     (VReg reg) -> do
       reg' <- getReg reg
       case reg' of
-        Nothing -> return (VReg reg)
+        Nothing   -> return (VReg reg)
         (Just r') -> return (VReg r')
     v' -> return v'
 
@@ -145,7 +145,7 @@ getVal val = do
 tryOptimize :: (Label, Reg) -> LLVMStmt -> OM Bool
 tryOptimize (label, reg) stmt = do
   rValLocation <- getRValMap stmt
-  case rValLocation of 
+  case rValLocation of
     Nothing -> do
       putRValMap stmt (label, reg)
       return True
@@ -158,10 +158,10 @@ tryOptimize (label, reg) stmt = do
         putRValMap stmt (label, reg)
         return True
 
--- optimizer monad -- 
+-- optimizer monad --
 type OM a = (StateT OptimizerState IO) a
 
--- initial state 
+-- initial state
 initOptimizerState :: LLVMProgram -> OptimizerState
 initOptimizerState llvmProgram = OptimizerState {
   sNewProgram = llvmProgram,
@@ -171,7 +171,7 @@ initOptimizerState llvmProgram = OptimizerState {
   sCurrentDef = Map.empty
 }
 
--- run optimizer monad -- 
+-- run optimizer monad --
 runOM :: OM a -> OptimizerState -> IO (a, OptimizerState)
 runOM = runStateT
 
@@ -180,7 +180,7 @@ runGCSE :: LLVMProgram -> IO (LLVMProgram, OptimizerState)
 runGCSE llvmProgram =
   runOM runOptimization (initOptimizerState llvmProgram)
 
--- run optimization -- 
+-- run optimization --
 runOptimization :: OM LLVMProgram
 runOptimization = do
   optimizeProgram
@@ -224,7 +224,7 @@ optimizePhisInBlock block = do
 optimizePhiOperands :: [(Val, Label)] -> OM [(Val, Label)]
 optimizePhiOperands operands = do
   state <- get
-  mapM (\(val, l) -> 
+  mapM (\(val, l) ->
     do
     val' <- getVal val
     return (val', l)
@@ -242,7 +242,7 @@ optimizeBlockStmts _ [] = return []
 optimizeBlockStmts label (stmt:stmts) = do
   newStmt <- optimizeStmt label stmt
   finalStmts <- optimizeBlockStmts label stmts
-  case newStmt of 
+  case newStmt of
     (Just stmt') -> do
       return $ stmt' : finalStmts
     Nothing ->
@@ -251,14 +251,14 @@ optimizeBlockStmts label (stmt:stmts) = do
 translateArgs :: [(LLVM.Type, Val)] -> OM [(LLVM.Type, Val)]
 translateArgs args = do
   mapM (\(t, v) -> do
-    v' <- getVal v 
-    return (t, v') ) 
+    v' <- getVal v
+    return (t, v') )
     args
 
 optimizeStmt :: Label -> LLVMStmt -> OM (Maybe LLVMStmt)
 optimizeStmt label llvmstmt = do
   let zeroR = Reg 0
-  case llvmstmt of 
+  case llvmstmt of
     (Call r1 t1 s1 ts) -> do
       ts' <- translateArgs ts
       return $ Just (Call r1 t1 s1 ts')
@@ -272,7 +272,7 @@ optimizeStmt label llvmstmt = do
     (Arithm r1 t1 v1 v2 op) -> do
       v1' <- getVal v1
       v2' <- getVal v2
-      toAdd <- tryOptimize (label, r1) (Arithm zeroR t1 v1' v2' op) 
+      toAdd <- tryOptimize (label, r1) (Arithm zeroR t1 v1' v2' op)
       if toAdd then
         return $ Just (Arithm r1 t1 v1' v2' op)
       else
@@ -284,21 +284,21 @@ optimizeStmt label llvmstmt = do
     (Cmp r1 c1 t1 v1 v2) -> do
       v1' <- getVal v1
       v2' <- getVal v2
-      toAdd <- tryOptimize (label, r1) (Cmp zeroR c1 t1 v1' v2') 
+      toAdd <- tryOptimize (label, r1) (Cmp zeroR c1 t1 v1' v2')
       if toAdd then
         return $ Just (Cmp r1 c1 t1 v1' v2')
       else
         return Nothing
-    (Xor r1 t1 v1 v2) -> do 
+    (Xor r1 t1 v1 v2) -> do
       v1' <- getVal v1
       v2' <- getVal v2
       toAdd <- tryOptimize (label, r1) (Xor zeroR t1 v1' v2')
       if toAdd then
         return $ Just (Xor r1 t1 v1' v2')
-      else 
+      else
         return Nothing
 
--- build dominator tree from blocks -- 
+-- build dominator tree from blocks --
 buildDominatorTree :: OM ()
 buildDominatorTree = do
   fn <- getCurrentFn
@@ -319,7 +319,7 @@ buildDominatorWhileChangesLoop (label:labels) = do
   predsDominators <- mapM getDominators preds
   let newDominators = Set.union (Set.fromList [label]) (Prelude.foldr Set.intersection (head predsDominators) predsDominators)
   dominators <- getDominators label
-  if dominators == newDominators then do 
+  if dominators == newDominators then do
     buildDominatorWhileChangesLoop labels
   else do
     setDominators label newDominators
