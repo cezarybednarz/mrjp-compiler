@@ -19,23 +19,18 @@ define i32 @main() {
 L1:                              ; preds = [L0]
   %r2 = call i32 @f(i32 1)
   %r5 = add i32 3, %r2
-  br i1 true, label %L11, label %L7
+  br i1 true, label %L8, label %L7
 L7:                              ; preds = [L1]
-  br i1 true, label %L9, label %L8
-L8:                              ; preds = [L7]
-  br label %L9
-L9:                              ; preds = [L7]
-  br label %L11
-L11:                              ; preds = [L1]
-  br i1 true, label %L13, label %L16
-L13:                              ; preds = [L11]
-  %r15 = add i32 3, %r2
-  br label %L19
-L16:                              ; preds = [L11]
-  %r18 = add i32 3, %r2
-  br label %L19
-L19:                              ; preds = [L16,L13]
-  %r22 = phi i32 [ %r15, %L13 ], [ %r18, %L16 ]
+  br label %L8
+L8:                              ; preds = [L1]
+  br i1 true, label %L10, label %L13
+L10:                              ; preds = [L8]
+  br label %L16
+L13:                              ; preds = [L8]
+  br label %L16
+L16:                              ; preds = [L13,L10]
+  %r22 = phi i32 [ %r12, %L10 ], [ %r15, %L13 ]
+  %r18 = sub i32 %r2, 1
   call void @printInt(i32 %r22)
   ret i32 0
 }

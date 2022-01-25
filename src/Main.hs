@@ -40,5 +40,5 @@ main = do
               (llvmProgram, _) <- runMem2Reg llvmProgram
               (llvmProgram, _) <- runTrivialPhiReduction llvmProgram
               (llvmProgram, _) <- runGCSE llvmProgram
-              -- todo runTrivialPhiReduction
+              (llvmProgram, _) <- runTrivialPhiReduction llvmProgram
               putStrLn $ unlines $ printLLVMProgram (pStrConstants llvmProgram) (pFunctions llvmProgram)

@@ -6,17 +6,14 @@ int f(int x) {
 int main() {
   int x = f(1);
   int y = 3 + x;
-  while (y > 0) {
+  if (true || true) {
     y = 3 + x;
-    boolean xd = true;
-    if (xd) {
-      y = 3 + x;
-    }
-    else {
-      y = 3 + x;
-    }
-    x--;
   }
+  else {
+    y = 3 + x;
+  }
+  x--;
+
   printInt(y);
   return 0;
 }
