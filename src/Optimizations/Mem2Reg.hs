@@ -9,7 +9,7 @@ import Data.Map as Map
 -- Modern SSA Algorithm
 -- https://pp.info.uni-karlsruhe.de/uploads/publikationen/braun13cc.pdf
 
--- type reg --
+-- used in sCurrentDef map --
 data TypeVal = TypeVal LLVM.Type Val
   deriving (Show, Ord, Eq)
 
@@ -17,8 +17,7 @@ data TypeVal = TypeVal LLVM.Type Val
 data OptimizerState = OptimizerState {
   sNewProgram :: LLVMProgram,
   sCurrentFn :: Maybe Fn,
-  sCurrentDef :: Map.Map Reg (Map.Map Label TypeVal),
-  sTransPhis :: Map.Map Reg Val -- translate phi values after trivial phi reduction
+  sCurrentDef :: Map.Map Reg (Map.Map Label TypeVal) -- defined in Modern SSA Algorithm
 }
   deriving (Show, Eq, Ord)
 
@@ -129,15 +128,6 @@ putArgsInFirstBlock (Reg r) ((t, _):args) = do
   writeVariable (Reg r) (Label 0) (TypeVal t (VReg (Reg r)))
   putArgsInFirstBlock (Reg (r + 1)) args
 
-getTransPhiVal :: Reg -> OM (Maybe Val)
-getTransPhiVal reg = do
-  gets (Map.lookup reg . sTransPhis)
-
-setTransPhiVal :: Reg -> Val -> OM ()
-setTransPhiVal reg val = do
-  state <- get
-  put $ state { sTransPhis = Map.insert reg val (sTransPhis state)}
-
 -- optimizer monad -- 
 type OM a = (StateT OptimizerState IO) a
 
@@ -146,8 +136,7 @@ initOptimizerState :: LLVMProgram -> OptimizerState
 initOptimizerState llvmProgram = OptimizerState {
   sNewProgram = llvmProgram,
   sCurrentFn = Nothing,
-  sCurrentDef = Map.empty,
-  sTransPhis = Map.empty
+  sCurrentDef = Map.empty
 }
 
 -- run optimizer monad -- 
