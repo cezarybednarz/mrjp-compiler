@@ -29,9 +29,8 @@ L10:                              ; preds = [L8]
 L13:                              ; preds = [L8]
   br label %L16
 L16:                              ; preds = [L13,L10]
-  %r22 = phi i32 [ %r12, %L10 ], [ %r15, %L13 ]
   %r18 = sub i32 %r2, 1
-  call void @printInt(i32 %r22)
+  call void @printInt(i32 %r5)
   ret i32 0
 }
 

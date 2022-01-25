@@ -209,7 +209,26 @@ optimizeBlocks = do
   fn <- getCurrentFn
   let (labels, blocks) = Prelude.unzip $ Map.toList (fBlocks fn)
   newBlocks <- mapM optimizeBlock blocks
-  setCurrentFn (fn {fBlocks = Map.fromList (Prelude.zip labels newBlocks)})
+  newBlocks' <- mapM optimizePhisInBlock newBlocks
+  setCurrentFn (fn {fBlocks = Map.fromList (Prelude.zip labels newBlocks')})
+
+optimizePhisInBlock :: LLBlock -> OM LLBlock
+optimizePhisInBlock block = do
+  let (regs, phis) = Prelude.unzip $ Map.toList $ bPhis block
+  newPhis <- mapM (\(t, operands) -> do
+    newOperands <- optimizePhiOperands operands
+    return (t, newOperands)
+    ) phis
+  return $ block { bPhis = Map.fromList (Prelude.zip regs newPhis)}
+
+optimizePhiOperands :: [(Val, Label)] -> OM [(Val, Label)]
+optimizePhiOperands operands = do
+  state <- get
+  mapM (\(val, l) -> 
+    do
+    val' <- getVal val
+    return (val', l)
+    ) operands
 
 optimizeBlock :: LLBlock -> OM LLBlock
 optimizeBlock block = do
