@@ -272,6 +272,7 @@ optimizeStmt label llvmstmt = do
     (LLVM.Ret t1 v1) -> do
       v1' <- getVal v1
       return $ Just (LLVM.Ret t1 v1')
+    RetVoid -> do return $ Just RetVoid
     (Arithm r1 t1 v1 v2 op) -> do
       v1' <- getVal v1
       v2' <- getVal v2

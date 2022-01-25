@@ -5,32 +5,51 @@ declare i8* @readString()
 declare void @error()
 declare i32 @__equStrings__(i8*, i8*)
 declare i8* @__concatStrings__(i8*, i8*)
+@.str.5 = private unnamed_addr constant [6 x i8] c"false\00", align 1
+@.str.4 = private unnamed_addr constant [5 x i8] c"true\00", align 1
+@.str.3 = private unnamed_addr constant [14 x i8] c"concatenation\00", align 1
+@.str.2 = private unnamed_addr constant [2 x i8] c" \00", align 1
+@.str.1 = private unnamed_addr constant [7 x i8] c"string\00", align 1
 @.str.0 = private unnamed_addr constant [1 x i8] c"\00", align 1
-
-define i32 @f(i32 %r0) {
-  br label %L2
-L2:                              ; preds = [L0]
-  %r6 = mul i32 %r0, %r0
-  ret i32 %r6
-}
 
 define i32 @main() {
   br label %L1
 L1:                              ; preds = [L0]
-  %r2 = call i32 @f(i32 1)
-  %r5 = add i32 3, %r2
-  br i1 true, label %L8, label %L7
-L7:                              ; preds = [L1]
-  br label %L8
-L8:                              ; preds = [L1]
-  br i1 true, label %L10, label %L13
-L10:                              ; preds = [L8]
-  br label %L16
-L13:                              ; preds = [L8]
-  br label %L16
-L16:                              ; preds = [L13,L10]
-  %r18 = sub i32 %r2, 1
-  call void @printInt(i32 %r5)
+  %r3 = sub i32 0, 23
+  call void @printInt(i32 %r7)
+  call void @printInt(i32 %r10)
+  call void @printInt(i32 %r13)
+  %r14 = sdiv i32 45, 2
+  call void @printInt(i32 %r14)
+  %r15 = srem i32 78, 3
+  call void @printInt(i32 %r15)
+  %r18 = sub i32 56, %r3
+  %r21 = add i32 56, %r3
+  %r22 = icmp sgt i32 %r18, %r21
+  call void @printBool(i1 %r22)
+  %r25 = sdiv i32 56, %r3
+  %r28 = mul i32 56, %r3
+  %r29 = icmp sle i32 %r25, %r28
+  call void @printBool(i1 %r29)
+  %r30 = call i8* @__concatStrings__(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.1, i32 0, i32 0), i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.2, i32 0, i32 0))
+  %r31 = call i8* @__concatStrings__(i8* %r30, i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str.3, i32 0, i32 0))
+  call void @printString(i8* %r31)
   ret i32 0
+}
+
+define void @printBool(i1 %r0) {
+  br label %L2
+L2:                              ; preds = [L0]
+  br i1 %r0, label %L5, label %L7
+L5:                              ; preds = [L2]
+  call void @printString(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.4, i32 0, i32 0))
+  ret void
+  br label %L9
+L7:                              ; preds = [L2]
+  call void @printString(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.5, i32 0, i32 0))
+  ret void
+  br label %L9
+L9:                              ; preds = [L7,L5]
+  ret void
 }
 

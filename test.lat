@@ -1,19 +1,23 @@
-
-int f(int x) {
-  return x * x;
+int main() {
+    int x = 56;
+    int y = -23;
+    printInt(x+y);
+    printInt(x-y);
+    printInt(x*y);
+    printInt(45/2);
+    printInt(78%3);
+    printBool(x-y > x+y);
+    printBool(x/y <= x*y);
+    printString("string"+" "+"concatenation");
+    return 0 ;
 }
 
-int main() {
-  int x = f(1);
-  int y = 3 + x;
-  if (true || true) {
-    y = 3 + x;
-  }
-  else {
-    y = 3 + x;
-  }
-  x--;
-
-  printInt(y);
-  return 0;
+void printBool(boolean b) {
+  if (b) {
+    printString("true");
+    return;
+  } else {
+    printString("false");
+    return;
+ }
 }
