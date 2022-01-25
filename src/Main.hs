@@ -36,6 +36,6 @@ main = do
             Right _ -> do
               hPutStrLn stderr "OK\n"
               (Right llvmProgram, _) <- runCompilation tree
-              (llvmProgram2, _) <- runMem2Reg llvmProgram
-              (llvmProgram3, _) <- runTrivialPhiReduction llvmProgram2
-              putStrLn $ unlines $ printLLVMProgram (pStrConstants llvmProgram3) (pFunctions llvmProgram3)
+              (llvmProgram, _) <- runMem2Reg llvmProgram
+              (llvmProgram, _) <- runTrivialPhiReduction llvmProgram
+              putStrLn $ unlines $ printLLVMProgram (pStrConstants llvmProgram) (pFunctions llvmProgram)
