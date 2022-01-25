@@ -64,21 +64,24 @@ L34:                              ; preds = [L26]
   %r36 = xor i1 %r35, true
   call void @printBool(i1 %r36)
   call void @printString(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.2, i32 0, i32 0))
-  br i1 %r3, label %L41, label %L39
+  %r38 = call i1 @test(i32 %r2)
+  br i1 %r38, label %L41, label %L39
 L39:                              ; preds = [L34]
   %r40 = call i1 @test(i32 0)
   br label %L41
 L41:                              ; preds = [L34]
   %r42 = phi i1 [ %r40, %L39 ], [ true, %L34 ]
   call void @printBool(i1 %r42)
-  br i1 %r12, label %L47, label %L45
+  %r44 = call i1 @test(i32 %r11)
+  br i1 %r44, label %L47, label %L45
 L45:                              ; preds = [L41]
   %r46 = call i1 @test(i32 1)
   br label %L47
 L47:                              ; preds = [L41]
   %r48 = phi i1 [ %r46, %L45 ], [ true, %L41 ]
   call void @printBool(i1 %r48)
-  br i1 %r20, label %L53, label %L50
+  %r49 = call i1 @test(i32 3)
+  br i1 %r49, label %L53, label %L50
 L50:                              ; preds = [L47]
   %r51 = sub i32 0, 5
   %r52 = call i1 @test(i32 %r51)
@@ -86,7 +89,8 @@ L50:                              ; preds = [L47]
 L53:                              ; preds = [L47]
   %r54 = phi i1 [ %r52, %L50 ], [ true, %L47 ]
   call void @printBool(i1 %r54)
-  br i1 %r29, label %L58, label %L56
+  %r55 = call i1 @test(i32 234234)
+  br i1 %r55, label %L58, label %L56
 L56:                              ; preds = [L53]
   %r57 = call i1 @test(i32 21321)
   br label %L58

@@ -261,11 +261,7 @@ optimizeStmt label llvmstmt = do
   case llvmstmt of 
     (Call r1 t1 s1 ts) -> do
       ts' <- translateArgs ts
-      toAdd <- tryOptimize (label, r1) (Call zeroR t1 s1 ts') 
-      if toAdd then
-        return $ Just (Call r1 t1 s1 ts')
-      else
-        return Nothing
+      return $ Just (Call r1 t1 s1 ts')
     (CallVoid t1 s1 ts) -> do
       ts' <- translateArgs ts
       return $ Just (CallVoid t1 s1 ts')
