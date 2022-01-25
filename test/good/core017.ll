@@ -39,7 +39,6 @@ L19:                              ; preds = [L15]
   call void @printString(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i32 0, i32 0))
   br label %L20
 L20:                              ; preds = [L19,L18]
-  %r56 = phi i32 [ 4, %L18 ], [ 4, %L19 ]
   %r21 = icmp eq i1 true, true
   br i1 %r21, label %L24, label %L22
 L22:                              ; preds = [L20]
@@ -60,7 +59,7 @@ L32:                              ; preds = [L24]
   %r33 = phi i1 [ %r31, %L29 ], [ true, %L24 ]
   %r34 = xor i1 %r33, true
   call void @printBool(i1 %r34)
-  %r36 = icmp eq i32 4, %r56
+  %r36 = icmp eq i32 4, 4
   %r37 = xor i1 %r36, true
   br i1 %r37, label %L48, label %L38
 L38:                              ; preds = [L32]

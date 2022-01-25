@@ -35,8 +35,7 @@ L24:                              ; preds = [L17]
   call void @printString(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i32 0, i32 0))
   br label %L25
 L25:                              ; preds = [L24,L21]
-  %r29 = phi i32 [ %r28, %L21 ], [ %r28, %L24 ]
-  call void @printInt(i32 %r29)
+  call void @printInt(i32 %r28)
   ret i32 0
 }
 
