@@ -6,6 +6,7 @@ data Val = VConst Integer
          | VGetElementPtr Int Int String -- id length value
          | VTrue
          | VFalse
+         | VNone
   deriving (Eq, Ord)
 
 newtype Reg = Reg Integer

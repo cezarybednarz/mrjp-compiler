@@ -1,4 +1,5 @@
-module Optimizations.Mem2Reg (runMem2Reg) where
+
+module Optimizations.Mem2Reg (runMem2Reg, runTrivialPhiReduction) where
 
 import Latte.Abs as Latte
 import Backend.LLVM as LLVM
@@ -16,7 +17,8 @@ data TypeVal = TypeVal LLVM.Type Val
 data OptimizerState = OptimizerState {
   sNewProgram :: LLVMProgram,
   sCurrentFn :: Maybe Fn,
-  sCurrentDef :: Map.Map Reg (Map.Map Label TypeVal)
+  sCurrentDef :: Map.Map Reg (Map.Map Label TypeVal),
+  sTransPhis :: Map.Map Reg Val -- translate phi values after trivial phi reduction
 }
   deriving (Show, Eq, Ord)
 
@@ -32,7 +34,7 @@ newRegister = do
 setRegister :: Reg -> OM ()
 setRegister reg = do
   program <- getNewProgram
-  setNewProgram $ program { pCurrReg = reg } 
+  setNewProgram $ program { pCurrReg = reg }
 
 getNewProgram :: OM LLVMProgram
 getNewProgram =
@@ -77,7 +79,6 @@ putEmptyPhiForBlock :: Label -> LLVM.Type -> Reg -> OM ()
 putEmptyPhiForBlock label t reg = do
   b <- getBlock label
   f <- getCurrentFn
-  --debugString $ ">>> putting phi " ++ show reg ++ " for block " ++ show label
   state <- get
   let block = b { bPhis = Map.insert reg (t, []) (bPhis b) }
   let newFunction = f { fBlocks = Map.insert label block (fBlocks f) }
@@ -106,6 +107,16 @@ popPhiForBlock label t reg = do
   setCurrentFn newFunction
   return ()
 
+removePhiForBlock :: Label -> Reg -> OM ()
+removePhiForBlock label reg = do
+  b <- getBlock label
+  f <- getCurrentFn
+  state <- get
+  let block = b { bPhis = Map.delete reg (bPhis b)}
+  let newFunction = f { fBlocks = Map.insert label block (fBlocks f) }
+  setCurrentFn newFunction
+  return ()
+
 clearCurrentDef :: OM ()
 clearCurrentDef = do
   state <- get
@@ -118,6 +129,15 @@ putArgsInFirstBlock (Reg r) ((t, _):args) = do
   writeVariable (Reg r) (Label 0) (TypeVal t (VReg (Reg r)))
   putArgsInFirstBlock (Reg (r + 1)) args
 
+getTransPhiVal :: Reg -> OM (Maybe Val)
+getTransPhiVal reg = do
+  gets (Map.lookup reg . sTransPhis)
+
+setTransPhiVal :: Reg -> Val -> OM ()
+setTransPhiVal reg val = do
+  state <- get
+  put $ state { sTransPhis = Map.insert reg val (sTransPhis state)}
+
 -- optimizer monad -- 
 type OM a = (StateT OptimizerState IO) a
 
@@ -126,17 +146,23 @@ initOptimizerState :: LLVMProgram -> OptimizerState
 initOptimizerState llvmProgram = OptimizerState {
   sNewProgram = llvmProgram,
   sCurrentFn = Nothing,
-  sCurrentDef = Map.empty
+  sCurrentDef = Map.empty,
+  sTransPhis = Map.empty
 }
 
 -- run optimizer monad -- 
 runOM :: OM a -> OptimizerState -> IO (a, OptimizerState)
 runOM = runStateT
 
--- start optimizing program (entrypoint of )--
+-- start optimizing program (entrypoint) --
 runMem2Reg :: LLVMProgram -> IO (LLVMProgram, OptimizerState)
 runMem2Reg llvmProgram =
   runOM runOptimization (initOptimizerState llvmProgram)
+
+-- start reduction of trivial phis (entrypoint) -- 
+runTrivialPhiReduction :: LLVMProgram -> IO (LLVMProgram, OptimizerState)
+runTrivialPhiReduction llvmProgram =
+  runOM runPhiReduction (initOptimizerState llvmProgram)
 
 -- run optimization -- 
 runOptimization :: OM LLVMProgram
@@ -146,10 +172,137 @@ runOptimization = do
   setNewProgram (newProgram { pFunctions = optimizedFunctions })
   gets sNewProgram
 
+-- run trivial phi reduction --
+runPhiReduction :: OM LLVMProgram
+runPhiReduction = do
+  reducePhiProgram
+  getNewProgram
+
+-- trivial phi reduction functions --
+reducePhiProgram :: OM ()
+reducePhiProgram = do
+  program <- getNewProgram
+  let fns = pFunctions program
+  newFns <- mapM reducePhiFn fns
+  setNewProgram program { pFunctions = newFns}
+
+reducePhiFn :: Fn -> OM Fn
+reducePhiFn fn = do
+  setCurrentFn fn
+  reducePhiFnLoop
+  getCurrentFn
+
+reducePhiFnLoop :: OM ()
+reducePhiFnLoop = do
+  fn <- getCurrentFn
+  let (labels, _) = Prelude.unzip $ Map.toList (fBlocks fn)
+  trivialPhi <- findTrivialPhiForBlocks labels
+  case trivialPhi of 
+    Nothing -> return ()
+    (Just phi) -> do
+      translateValuesForBlocks phi labels
+      reducePhiFnLoop
+
+findTrivialPhiForBlocks :: [Label] -> OM (Maybe (Reg, Val))
+findTrivialPhiForBlocks [] = return Nothing
+findTrivialPhiForBlocks (label:labels) = do
+  block <- getBlock label
+  let phis = Map.toList (bPhis block)
+  trivialPhi <- findTrivialPhis phis
+  case trivialPhi of 
+    Nothing -> 
+      findTrivialPhiForBlocks labels
+    (Just (reg, val)) -> do
+      removePhiForBlock label reg
+      return $ Just (reg, val)
+
+findTrivialPhis :: [(Reg, (LLVM.Type, [(Val, Label)]))] -> OM (Maybe (Reg, Val))
+findTrivialPhis [] = return Nothing
+findTrivialPhis ((reg, (t, [(v1, l1), (v2, l2)])):phis) = do
+  if v1 == v2 then 
+    return $ Just (reg, v1)
+  else
+    findTrivialPhis phis
+
+translateValuesForBlocks :: (Reg, Val) -> [Label] -> OM ()
+translateValuesForBlocks _ [] = return ()
+translateValuesForBlocks regVal (label:labels) = do
+  translateStmtsForBlock regVal label
+  translatePhisForBlock regVal label
+  translateValuesForBlocks regVal labels
+
+translateStmtsForBlock :: (Reg, Val) -> Label -> OM ()
+translateStmtsForBlock regVal label = do
+  block <- getBlock label
+  let stmts = bStmts block
+  newStmts <- mapM (translateStmt regVal) stmts
+  let newBlock = block { bStmts = newStmts}
+  setBlock label newBlock
+  return ()
+
+translateArgs :: [(LLVM.Type, Val)] -> (Reg, Val) -> OM [(LLVM.Type, Val)]
+translateArgs args regVal= do
+  mapM (\(t, v) -> do
+    v' <- transVal v regVal
+    return (t, v') ) 
+    args
+
+translateStmt :: (Reg, Val) -> LLVMStmt -> OM LLVMStmt
+translateStmt regVal llvmstmt = do
+  case llvmstmt of 
+    (Call r1 t1 s1 ts) -> do
+      newTs <- translateArgs ts regVal
+      return (Call r1 t1 s1 newTs)
+    (CallVoid t1 s1 ts) -> do
+      newTs <- translateArgs ts regVal
+      return (CallVoid t1 s1 newTs)
+    (LLVM.Ret t1 v1) -> do
+      v1' <- transVal v1 regVal
+      return (LLVM.Ret t1 v1')
+    RetVoid -> do return RetVoid
+    (Arithm r1 t1 v1 v2 op) -> do
+      v1' <- transVal v1 regVal
+      v2' <- transVal v2 regVal
+      return (Arithm r1 t1 v1' v2' op)
+    (Br l1) -> return (Br l1)
+    (BrCond t1 v1 l1 l2) -> do
+      v1' <- transVal v1 regVal
+      return (BrCond t1 v1' l1 l2)
+    (Cmp r1 c1 t1 v1 v2) -> do
+      v1' <- transVal v1 regVal
+      v2' <- transVal v2 regVal
+      return (Cmp r1 c1 t1 v1' v2')
+    (Xor r1 t1 v1 v2) -> do 
+      v1' <- transVal v1 regVal
+      v2' <- transVal v2 regVal
+      return (Xor r1 t1 v1' v2')
+
+translatePhisForBlock :: (Reg, Val) -> Label -> OM ()
+translatePhisForBlock regVal label = do
+  block <- getBlock label
+  let (regs, phisVal) = Prelude.unzip $ Map.toList (bPhis block)
+  newPhisVal <- mapM (\(t, [(v1, l1), (v2, l2)]) -> do
+      v1' <- transVal v1 regVal
+      v2' <- transVal v2 regVal
+      return  (t, [(v1', l1), (v2', l2)])
+    ) phisVal
+  let newBlock = block { bPhis = Map.fromList (Prelude.zip regs newPhisVal) }
+  setBlock label newBlock
+  return ()
+
+transVal :: Val -> (Reg, Val) -> OM Val
+transVal val (reg, phiVal) = do
+  case val of 
+    (VReg r) -> 
+      if r == reg then
+        return phiVal
+      else
+        return (VReg r)
+    v' -> return v'
+
 -- functions for optimizing structures in LLVM --
 optimizeStmt :: Label -> LLVMStmt -> OM (Maybe LLVMStmt)
 optimizeStmt label llvmstmt = do
-  --debugString $ "  " ++ show llvmstmt
   case llvmstmt of
     (Call r1 t1 s1 ts) -> do
       ts' <- optimizeArgsList label ts
@@ -225,12 +378,12 @@ optimizeBackendPhis label = do
 -- fill in empty phis generated by algorithm -- 
 optimizeEmptyPhi :: Label -> (Reg, (LLVM.Type, [(Val, Label)])) -> OM ()
 optimizeEmptyPhi label (variable, (t, vals)) = do
-  case vals of 
+  case vals of
     [(VReg val, _)] -> do
       popPhiForBlock label t variable
       addPhiOperands val label (TypeVal t (VReg variable))
       return ()
-    _ -> do 
+    _ -> do
       return ()
 
 optimizeEmptyPhis :: Label -> OM ()
@@ -242,8 +395,6 @@ optimizeEmptyPhis label = do
 optimizeBlock :: Label -> OM ()
 optimizeBlock label = do
   block <- getBlock label
-  --debugString $ show $ bLabel block
-  --debugString $ show $ bInBlocks block
   let stmts = bStmts block
   optimizeBackendPhis label
   newStmts <- optimizeStmtsList label stmts
@@ -256,7 +407,6 @@ optimizeCurrFn = do
   fn <- getCurrentFn
   putArgsInFirstBlock (Reg 0) (fArgs fn)
   setRegister (fMaxRegister fn)
-  --debugString $ "function " ++ fName fn ++ "()"
   let (labels, _) = Prelude.unzip $ Map.toList $ fBlocks fn
   mapM_ optimizeBlock labels
   mapM_ optimizeEmptyPhis labels
@@ -273,7 +423,6 @@ optimizeFns (fn:fns) = do
 -- assign register to block -- 
 writeVariable :: Reg -> Label -> TypeVal -> OM ()
 writeVariable targetReg label val = do
-  --debugString $ "writeVariable " ++ show targetReg ++ " -> " ++ show val
   state <- get
   let currentDef = sCurrentDef state
   let newCurrentDef = case Map.lookup targetReg currentDef of
@@ -317,12 +466,9 @@ readVariableRecursive t variable label = do
       readVariable t variable inBlockLabel
     inBlockLabels -> do
       val <- newRegister
-      --debugString $ "variable: " ++ show variable
-      --debugString $ "val: " ++ show val
       putEmptyPhiForBlock label t val
       writeVariable variable label (TypeVal t (VReg val))
       putPhiForBlock label t val (VReg variable, label) -- in order to reconstruct in later phase
-      --addPhiOperands variable label (TypeVal t (VReg val))
       return (TypeVal t (VReg val))
   writeVariable variable label val
   return val
