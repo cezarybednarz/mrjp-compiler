@@ -196,10 +196,15 @@ cmpTypeVal t val = do
   tVal <- convTypeVal t
   return $ tVal == val
 
+-- Analyse LValue --
+
+-- analyseLValue :: LValue -> SAM Val
+-- analyseLValue (LVar line id) = getIdentVal line
+
 -- Analyse Expr --
 
 analyseExpr :: Expr -> SAM Val
-analyseExpr (EVar line id) = getIdentVal line id
+analyseExpr (L line id) = getIdentVal line id
 analyseExpr (ELitInt line i) = return VInt
 analyseExpr (ELitTrue line) = return VBool
 analyseExpr (ELitFalse line) = return VBool

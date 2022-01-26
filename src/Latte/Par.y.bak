@@ -60,14 +60,11 @@ import Latte.Lex
   '{' { PT _ (TS _ 39) }
   '||' { PT _ (TS _ 40) }
   '}' { PT _ (TS _ 41) }
-  L_Ident  { PT _ (TV _) }
   L_integ  { PT _ (TI _) }
   L_quoted { PT _ (TL _) }
+  L_CIdent { PT _ (T_CIdent _) }
 
 %%
-
-Ident :: { (Latte.Abs.BNFC'Position, Latte.Abs.Ident) }
-Ident  : L_Ident { (uncurry Latte.Abs.BNFC'Position (tokenLineCol $1), Latte.Abs.Ident (tokenText $1)) }
 
 Integer :: { (Latte.Abs.BNFC'Position, Integer) }
 Integer  : L_integ  { (uncurry Latte.Abs.BNFC'Position (tokenLineCol $1), (read (tokenText $1)) :: Integer) }
@@ -75,18 +72,21 @@ Integer  : L_integ  { (uncurry Latte.Abs.BNFC'Position (tokenLineCol $1), (read 
 String  :: { (Latte.Abs.BNFC'Position, String) }
 String   : L_quoted { (uncurry Latte.Abs.BNFC'Position (tokenLineCol $1), ((\(PT _ (TL s)) -> s) $1)) }
 
+CIdent :: { (Latte.Abs.BNFC'Position, Latte.Abs.CIdent) }
+CIdent  : L_CIdent { (uncurry Latte.Abs.BNFC'Position (tokenLineCol $1), Latte.Abs.CIdent (tokenText $1)) }
+
 Program :: { (Latte.Abs.BNFC'Position, Latte.Abs.Program) }
 Program : ListTopDef { (fst $1, Latte.Abs.Program (fst $1) (snd $1)) }
 
 TopDef :: { (Latte.Abs.BNFC'Position, Latte.Abs.TopDef) }
-TopDef : Type Ident '(' ListArg ')' Block { (fst $1, Latte.Abs.FnDef (fst $1) (snd $1) (snd $2) (snd $4) (snd $6)) }
+TopDef : Type CIdent '(' ListArg ')' Block { (fst $1, Latte.Abs.FnDef (fst $1) (snd $1) (snd $2) (snd $4) (snd $6)) }
 
 ListTopDef :: { (Latte.Abs.BNFC'Position, [Latte.Abs.TopDef]) }
 ListTopDef : TopDef { (fst $1, (:[]) (snd $1)) }
            | TopDef ListTopDef { (fst $1, (:) (snd $1) (snd $2)) }
 
 Arg :: { (Latte.Abs.BNFC'Position, Latte.Abs.Arg) }
-Arg : Type Ident { (fst $1, Latte.Abs.Arg (fst $1) (snd $1) (snd $2)) }
+Arg : Type CIdent { (fst $1, Latte.Abs.Arg (fst $1) (snd $1) (snd $2)) }
 
 ListArg :: { (Latte.Abs.BNFC'Position, [Latte.Abs.Arg]) }
 ListArg : {- empty -} { (Latte.Abs.BNFC'NoPosition, []) }
@@ -111,13 +111,13 @@ Stmt : ';' { (uncurry Latte.Abs.BNFC'Position (tokenLineCol $1), Latte.Abs.Empty
      | 'return' ';' { (uncurry Latte.Abs.BNFC'Position (tokenLineCol $1), Latte.Abs.VRet (uncurry Latte.Abs.BNFC'Position (tokenLineCol $1))) }
      | 'if' '(' Expr ')' Stmt { (uncurry Latte.Abs.BNFC'Position (tokenLineCol $1), Latte.Abs.Cond (uncurry Latte.Abs.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5)) }
      | 'if' '(' Expr ')' Stmt 'else' Stmt { (uncurry Latte.Abs.BNFC'Position (tokenLineCol $1), Latte.Abs.CondElse (uncurry Latte.Abs.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5) (snd $7)) }
-     | 'for' '(' Type Ident ':' Expr ')' Stmt { (uncurry Latte.Abs.BNFC'Position (tokenLineCol $1), Latte.Abs.ForEach (uncurry Latte.Abs.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $4) (snd $6) (snd $8)) }
+     | 'for' '(' Type CIdent ':' Expr ')' Stmt { (uncurry Latte.Abs.BNFC'Position (tokenLineCol $1), Latte.Abs.ForEach (uncurry Latte.Abs.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $4) (snd $6) (snd $8)) }
      | 'while' '(' Expr ')' Stmt { (uncurry Latte.Abs.BNFC'Position (tokenLineCol $1), Latte.Abs.While (uncurry Latte.Abs.BNFC'Position (tokenLineCol $1)) (snd $3) (snd $5)) }
      | Expr ';' { (fst $1, Latte.Abs.SExp (fst $1) (snd $1)) }
 
 Item :: { (Latte.Abs.BNFC'Position, Latte.Abs.Item) }
-Item : Ident { (fst $1, Latte.Abs.NoInit (fst $1) (snd $1)) }
-     | Ident '=' Expr { (fst $1, Latte.Abs.Init (fst $1) (snd $1) (snd $3)) }
+Item : CIdent { (fst $1, Latte.Abs.NoInit (fst $1) (snd $1)) }
+     | CIdent '=' Expr { (fst $1, Latte.Abs.Init (fst $1) (snd $1) (snd $3)) }
 
 ListItem :: { (Latte.Abs.BNFC'Position, [Latte.Abs.Item]) }
 ListItem : Item { (fst $1, (:[]) (snd $1)) }
@@ -136,7 +136,7 @@ ListType : {- empty -} { (Latte.Abs.BNFC'NoPosition, []) }
          | Type ',' ListType { (fst $1, (:) (snd $1) (snd $3)) }
 
 LValue :: { (Latte.Abs.BNFC'Position, Latte.Abs.LValue) }
-LValue : Ident { (fst $1, Latte.Abs.LVar (fst $1) (snd $1)) }
+LValue : CIdent { (fst $1, Latte.Abs.LVar (fst $1) (snd $1)) }
        | Expr6 '[' Expr ']' { (fst $1, Latte.Abs.LIdx (fst $1) (snd $1) (snd $3)) }
 
 Expr7 :: { (Latte.Abs.BNFC'Position, Latte.Abs.Expr) }
@@ -147,7 +147,7 @@ Expr7 : Integer { (fst $1, Latte.Abs.ELitInt (fst $1) (snd $1)) }
 
 Expr6 :: { (Latte.Abs.BNFC'Position, Latte.Abs.Expr) }
 Expr6 : LValue { (fst $1, Latte.Abs.ELValue (fst $1) (snd $1)) }
-      | Ident '(' ListExpr ')' { (fst $1, Latte.Abs.EApp (fst $1) (snd $1) (snd $3)) }
+      | CIdent '(' ListExpr ')' { (fst $1, Latte.Abs.EApp (fst $1) (snd $1) (snd $3)) }
       | String { (fst $1, Latte.Abs.EString (fst $1) (snd $1)) }
       | Expr7 { (fst $1, (snd $1)) }
 

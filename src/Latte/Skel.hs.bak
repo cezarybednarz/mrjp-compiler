@@ -13,9 +13,9 @@ type Result = Err String
 failure :: Show a => a -> Result
 failure x = Left $ "Undefined case: " ++ show x
 
-transIdent :: Latte.Abs.Ident -> Result
-transIdent x = case x of
-  Latte.Abs.Ident string -> failure x
+transCIdent :: Latte.Abs.CIdent -> Result
+transCIdent x = case x of
+  Latte.Abs.CIdent string -> failure x
 
 transProgram :: Show a => Latte.Abs.Program' a -> Result
 transProgram x = case x of
@@ -23,11 +23,11 @@ transProgram x = case x of
 
 transTopDef :: Show a => Latte.Abs.TopDef' a -> Result
 transTopDef x = case x of
-  Latte.Abs.FnDef _ type_ ident args block -> failure x
+  Latte.Abs.FnDef _ type_ cident args block -> failure x
 
 transArg :: Show a => Latte.Abs.Arg' a -> Result
 transArg x = case x of
-  Latte.Abs.Arg _ type_ ident -> failure x
+  Latte.Abs.Arg _ type_ cident -> failure x
 
 transBlock :: Show a => Latte.Abs.Block' a -> Result
 transBlock x = case x of
@@ -45,14 +45,14 @@ transStmt x = case x of
   Latte.Abs.VRet _ -> failure x
   Latte.Abs.Cond _ expr stmt -> failure x
   Latte.Abs.CondElse _ expr stmt1 stmt2 -> failure x
-  Latte.Abs.ForEach _ type_ ident expr stmt -> failure x
+  Latte.Abs.ForEach _ type_ cident expr stmt -> failure x
   Latte.Abs.While _ expr stmt -> failure x
   Latte.Abs.SExp _ expr -> failure x
 
 transItem :: Show a => Latte.Abs.Item' a -> Result
 transItem x = case x of
-  Latte.Abs.NoInit _ ident -> failure x
-  Latte.Abs.Init _ ident expr -> failure x
+  Latte.Abs.NoInit _ cident -> failure x
+  Latte.Abs.Init _ cident expr -> failure x
 
 transType :: Show a => Latte.Abs.Type' a -> Result
 transType x = case x of
@@ -65,7 +65,7 @@ transType x = case x of
 
 transLValue :: Show a => Latte.Abs.LValue' a -> Result
 transLValue x = case x of
-  Latte.Abs.LVar _ ident -> failure x
+  Latte.Abs.LVar _ cident -> failure x
   Latte.Abs.LIdx _ expr1 expr2 -> failure x
 
 transExpr :: Show a => Latte.Abs.Expr' a -> Result
@@ -74,7 +74,7 @@ transExpr x = case x of
   Latte.Abs.ELitTrue _ -> failure x
   Latte.Abs.ELitFalse _ -> failure x
   Latte.Abs.ELValue _ lvalue -> failure x
-  Latte.Abs.EApp _ ident exprs -> failure x
+  Latte.Abs.EApp _ cident exprs -> failure x
   Latte.Abs.EString _ string -> failure x
   Latte.Abs.ELength _ expr -> failure x
   Latte.Abs.Neg _ expr -> failure x

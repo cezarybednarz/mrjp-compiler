@@ -24,11 +24,11 @@ data Program' a = Program a [TopDef' a]
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type TopDef = TopDef' BNFC'Position
-data TopDef' a = FnDef a (Type' a) Ident [Arg' a] (Block' a)
+data TopDef' a = FnDef a (Type' a) CIdent [Arg' a] (Block' a)
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Arg = Arg' BNFC'Position
-data Arg' a = Arg a (Type' a) Ident
+data Arg' a = Arg a (Type' a) CIdent
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Block = Block' BNFC'Position
@@ -47,13 +47,13 @@ data Stmt' a
     | VRet a
     | Cond a (Expr' a) (Stmt' a)
     | CondElse a (Expr' a) (Stmt' a) (Stmt' a)
-    | ForEach a (Type' a) Ident (Expr' a) (Stmt' a)
+    | ForEach a (Type' a) CIdent (Expr' a) (Stmt' a)
     | While a (Expr' a) (Stmt' a)
     | SExp a (Expr' a)
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Item = Item' BNFC'Position
-data Item' a = NoInit a Ident | Init a Ident (Expr' a)
+data Item' a = NoInit a CIdent | Init a CIdent (Expr' a)
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Type = Type' BNFC'Position
@@ -67,7 +67,7 @@ data Type' a
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type LValue = LValue' BNFC'Position
-data LValue' a = LVar a Ident | LIdx a (Expr' a) (Expr' a)
+data LValue' a = LVar a CIdent | LIdx a (Expr' a) (Expr' a)
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
 type Expr = Expr' BNFC'Position
@@ -76,7 +76,7 @@ data Expr' a
     | ELitTrue a
     | ELitFalse a
     | ELValue a (LValue' a)
-    | EApp a Ident [Expr' a]
+    | EApp a CIdent [Expr' a]
     | EString a String
     | ELength a (Expr' a)
     | Neg a (Expr' a)
@@ -101,7 +101,7 @@ type RelOp = RelOp' BNFC'Position
 data RelOp' a = LTH a | LE a | GTH a | GE a | EQU a | NE a
   deriving (C.Eq, C.Ord, C.Show, C.Read, C.Functor, C.Foldable, C.Traversable)
 
-newtype Ident = Ident String
+newtype CIdent = CIdent String
   deriving (C.Eq, C.Ord, C.Show, C.Read, Data.String.IsString)
 
 -- | Start position (line, column) of something.

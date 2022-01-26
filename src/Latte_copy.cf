@@ -74,6 +74,8 @@ LIdx.      LValue ::= Expr6 "[" Expr "]" ;
 
 -- Expressions ---------------------------------------------
 
+EVar.      Expr7 ::= Ident ;
+
 ELitInt.   Expr7 ::= Integer ;
 
 ELitTrue.  Expr7 ::= "true" ;

@@ -1,0 +1,7 @@
+int main(){
+	boolean b;
+	if (b || b) {
+		printInt(1);
+	}
+	return 0;
+}
