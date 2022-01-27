@@ -70,7 +70,10 @@ declareFunc line id func = do
 analyseReassignment :: BNFC'Position -> Ident -> Loc -> Val -> SAM ()
 analyseReassignment line id loc val = do
   storeVal <- getIdentVal line id
-  when (val /= storeVal) $ throwError $ errMessage line (AssTypeMismatch id)
+  storeVal' <- case storeVal of
+    (VArray arrVal) -> return arrVal
+    s -> return storeVal 
+  when (val /= storeVal') $ throwError $ errMessage line (AssTypeMismatch id)
 
 
 -- get values --
@@ -211,7 +214,7 @@ analyseLValue (LVar line id) = do
 analyseLValue (LIdx line expr _) = do
   case expr of
     (ELValue _ (LVar _ id)) -> do
-      val <- getIdentVal line id
+      (VArray val) <- getIdentVal line id
       return (id, val)
     _ -> do
       throwError $ errMessage line ArrayWrongType
@@ -220,7 +223,7 @@ analyseLValue (LIdx line expr _) = do
 
 analyseExpr :: Expr -> SAM Val
 analyseExpr (ELValue line lvalue) = do
-  (id, _) <- analyseLValue lvalue
+  (id, val) <- analyseLValue lvalue
   getIdentVal line id
 analyseExpr (ELitInt line i) = return VInt
 analyseExpr (ELitTrue line) = return VBool
@@ -274,8 +277,13 @@ analyseExpr (ENewArr line t expr) = do
   case e of
     VInt -> return (VArray v)
     _ -> throwError $ errMessage line WrongExpressionInArray
-analyseExpr (ELength _ _) = do
-  -- todo analyse expression
+analyseExpr (ELength line expr) = do
+  val <- analyseExpr expr
+  case val of 
+    VArray _ -> 
+      return VInt
+    _ -> 
+      throwError $ errMessage line LengthNotOnArray 
   return VInt
 
 -- Stmt --
@@ -319,6 +327,8 @@ declItem t (NoInit line id) = do
 declItem t (Init line id e) = do
   (_, funcEnv, fnRetVal, scope) <- ask
   n <- analyseExpr e
+  debugString $ "t: " ++ show t
+  debugString $ "n: " ++ show n
   goodTypes <- cmpTypeVal t n
   if goodTypes then do
     valEnv <- declareVar line id n
@@ -350,12 +360,19 @@ analyseStmt (Decl line t items) = do
   return (ReturnNothing, env)
 analyseStmt (Ass line lvalue expr) = do
   debugString $ "ass !!! lvalue: " ++ show lvalue ++ " expr: " ++ show expr
-  (id, n) <- analyseLValue lvalue
+  (id, val) <- analyseLValue lvalue
+  n <- analyseExpr expr
   l <- getIdentLoc line id
   env <- ask
-  analyseReassignment line id l n
-  insertValue l n
-  return (ReturnNothing, env)
+  if n == val then do
+    debug
+    debugString $ "n: " ++ show n
+    debugString $ "l: " ++ show l
+    analyseReassignment line id l n
+    --insertValue l n
+    return (ReturnNothing, env)
+  else
+    throwError $ errMessage line $ AssTypeMismatch id
 
 analyseStmt (Incr line lvalue) = do
   (id, _) <- analyseLValue lvalue
@@ -428,6 +445,10 @@ analyseStmt (ForEach line t id expr block) = do
   case expr of 
     (ELValue line2 (LVar line3 idArr)) -> do
       t' <- convTypeVal t
+      debug
+      debugString $ "idArr = " ++ show idArr
+      xd <- getIdentVal line3 idArr
+      debugString $ "getIdentVal line3 arr == " ++ show xd
       (VArray tArr) <- getIdentVal line3 idArr
       if tArr == t' then do
         (valEnv, funcEnv, fnRetVal, scope) <- ask

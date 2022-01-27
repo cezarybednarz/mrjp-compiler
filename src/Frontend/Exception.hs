@@ -40,6 +40,7 @@ data SemanticAnalysisException
     | WrongExpressionInArray
     | WrongArrayTypeInForEach
     | ForEachTypeMismatch Ident
+    | LengthNotOnArray 
     -- invalid expression as array name
 
 instance Show SemanticAnalysisException where
@@ -67,6 +68,7 @@ instance Show SemanticAnalysisException where
   show WrongExpressionInArray = "wrong expression in array brackets, should be of type int"
   show WrongArrayTypeInForEach = "for loop should be iterated over an array"
   show (ForEachTypeMismatch (Ident id)) = "variable " ++ show id ++ " should be different type"
+  show LengthNotOnArray = "length can be only applied to array type"
 
 
 
