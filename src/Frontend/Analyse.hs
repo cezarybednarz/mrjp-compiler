@@ -196,15 +196,28 @@ cmpTypeVal t val = do
   tVal <- convTypeVal t
   return $ tVal == val
 
--- Analyse LValue --
+-- get ident from array -- 
+getIdentFromLIdx :: LValue -> SAM Ident
+getIdentFromLIdx (LIdx line expr _) = do
+  case expr of
+    (ELValue _ (LVar _ id)) ->
+      return id
+    _ -> do
+      throwError $ errMessage line ArrayWrongType
 
--- analyseLValue :: LValue -> SAM Val
--- analyseLValue (LVar line id) = getIdentVal line
+-- Analyse LValue --
+analyseLValue :: LValue -> SAM Ident
+analyseLValue (LVar line id) = do
+  return id
+analyseLValue (LIdx line (ELValue _ lvalue) expr2) = do
+  getIdentFromLIdx lvalue
 
 -- Analyse Expr --
 
 analyseExpr :: Expr -> SAM Val
-analyseExpr (L line id) = getIdentVal line id
+analyseExpr (ELValue line lvalue) = do
+  id <- analyseLValue lvalue
+  getIdentVal line id
 analyseExpr (ELitInt line i) = return VInt
 analyseExpr (ELitTrue line) = return VBool
 analyseExpr (ELitFalse line) = return VBool
@@ -320,7 +333,8 @@ analyseStmt (BStmt line (Block line2 b)) = analyseBlock (BStmt line (Block line2
 analyseStmt (Decl line t items) = do
   env <- analyseDecl t items
   return (ReturnNothing, env)
-analyseStmt (Ass line id expr) = do
+analyseStmt (Ass line lvalue expr) = do
+  id <- analyseLValue lvalue
   n <- analyseExpr expr
   l <- getIdentLoc line id
   env <- ask
@@ -328,7 +342,8 @@ analyseStmt (Ass line id expr) = do
   insertValue l n
   return (ReturnNothing, env)
 
-analyseStmt (Incr line id) = do
+analyseStmt (Incr line lvalue) = do
+  id <- analyseLValue lvalue
   val <- getIdentVal line id
   case val of
     VInt -> do

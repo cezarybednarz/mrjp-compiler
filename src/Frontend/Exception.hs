@@ -35,6 +35,9 @@ data SemanticAnalysisException
     | InvalidStringOperator
     | FunctionRedeclared Ident
     | StringInvalidRel
+    | ArrayWrongType 
+    | WrongLValue
+    -- invalid expression as array name
 
 instance Show SemanticAnalysisException where
   show (FunctionUndeclared (Ident ident)) = "function " ++  show ident ++ " undeclared"
@@ -56,6 +59,8 @@ instance Show SemanticAnalysisException where
   show InvalidStringOperator = "'+' is the only arithmetic operator accepted on strings"
   show (FunctionRedeclared (Ident ident)) = "cannot redeclare function " ++ show ident
   show StringInvalidRel = "'==' and '!=' are the only valid relation operators on strings"
+  show ArrayWrongType = "array has wrong type "
+  show WrongLValue = "wrong lvalue"
 
 
 

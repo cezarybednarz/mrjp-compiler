@@ -42,6 +42,7 @@ data Val
     | VBool
     | VString
     | VVoid
+    | VArray Val
   deriving (Eq, Ord)
 
 

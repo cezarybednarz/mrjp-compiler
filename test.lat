@@ -1,7 +1,5 @@
 int main(){
-	boolean b;
-	if (b || b) {
-		printInt(1);
-	}
+	int x = 3;
+  printInt(x);
 	return 0;
 }

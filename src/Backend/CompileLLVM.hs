@@ -348,10 +348,25 @@ compileExprList (expr:exprs) = do
   valList <- compileExprList exprs
   return $ v : valList
 
+-- get ident from array -- 
+getIdentFromLIdx :: LValue -> CM Ident
+getIdentFromLIdx (LIdx line expr _) = do
+  case expr of
+    (ELValue _ (LVar _ id)) ->
+      return id
+
+-- Analyse LValue --
+getIdentLValue :: LValue -> CM Ident
+getIdentLValue (LVar line id) = do
+  return id
+getIdentLValue (LIdx line (ELValue _ lvalue) expr2) = do
+  getIdentFromLIdx lvalue
+
 -- compile exprs --
 -- always returns value or register which isn't a pointer --
 compileExpr :: Expr -> CM (LLVM.Type, Val)
-compileExpr (EVar _ id) = do
+compileExpr (ELValue _ lvalue) = do
+  id <- getIdentLValue lvalue
   (t, reg) <- getIdentTypeReg id
   reg2 <- emitLoad t reg
   return (t, VReg reg2)
@@ -496,22 +511,25 @@ compileStmt (BStmt line (Block line2 b)) = do
 compileStmt (Decl line t items) = do
   env <- compileDecl t items
   return (ReturnNothing, env)
-compileStmt (Ass _ id expr) = do
+compileStmt (Ass _ lvalue expr) = do
   env <- ask
+  id <- getIdentLValue lvalue
   (_, e) <- compileExpr expr
   (t, r) <- getIdentTypeReg id
   emitStmt $ Store t e (Ptr t) r
   return (ReturnNothing, env)
-compileStmt (Incr l id) = do
+compileStmt (Incr l lvalue) = do
   env <- ask
+  id <- getIdentLValue lvalue
   (_, r) <- getIdentTypeReg id
-  (_, reg) <- compileExpr (EAdd l (EVar l id) (Plus l) (ELitInt l 1))
+  (_, reg) <- compileExpr (EAdd l (ELValue l (LVar l id)) (Plus l) (ELitInt l 1))
   emitStmt $ Store Ti32 reg (Ptr Ti32) r
   return (ReturnNothing, env)
-compileStmt (Decr l id) = do
+compileStmt (Decr l lvalue) = do
   env <- ask
+  id <- getIdentLValue lvalue
   (_, r) <- getIdentTypeReg id
-  (_, reg) <- compileExpr (EAdd l (EVar l id) (Minus l) (ELitInt l 1))
+  (_, reg) <- compileExpr (EAdd l (ELValue l (LVar l id)) (Minus l) (ELitInt l 1))
   emitStmt $ Store Ti32 reg (Ptr Ti32) r
   return (ReturnNothing, env)
 compileStmt (Latte.Ret _ expr) = do
