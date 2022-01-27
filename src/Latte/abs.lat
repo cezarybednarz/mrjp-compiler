@@ -1,0 +1,23 @@
+../../test/extensions/arrays1/array001.lat
+
+Parse Successful!
+
+[Abstract Syntax]
+
+Program (Just (1,1)) [FnDef (Just (1,1)) (Int (Just (1,1))) (Ident "main") [] (Block (Just (1,12)) [Decl (Just (3,3)) (Array (Just (3,3)) (Int (Just (3,3)))) [Init (Just (3,9)) (Ident "a") (ENewArr (Just (3,13)) (Int (Just (3,17))) (ELitInt (Just (3,21)) 10))],Decl (Just (4,3)) (Int (Just (4,3))) [Init (Just (4,7)) (Ident "j") (ELitInt (Just (4,9)) 0)],While (Just (5,3)) (ERel (Just (5,10)) (ELValue (Just (5,10)) (LVar (Just (5,10)) (Ident "j"))) (LTH (Just (5,11))) (ELength (Just (5,12)) (ELValue (Just (5,12)) (LVar (Just (5,12)) (Ident "a"))))) (BStmt (Just (5,22)) (Block (Just (5,22)) [Ass (Just (6,6)) (LIdx (Just (6,6)) (ELValue (Just (6,6)) (LVar (Just (6,6)) (Ident "a"))) (ELValue (Just (6,8)) (LVar (Just (6,8)) (Ident "j")))) (ELValue (Just (6,13)) (LVar (Just (6,13)) (Ident "j"))),Incr (Just (7,6)) (LVar (Just (7,6)) (Ident "j"))])),ForEach (Just (10,3)) (Int (Just (10,8))) (Ident "x") (ELValue (Just (10,16)) (LVar (Just (10,16)) (Ident "a"))) (SExp (Just (11,6)) (EApp (Just (11,6)) (Ident "printInt") [ELValue (Just (11,15)) (LVar (Just (11,15)) (Ident "x"))])),Decl (Just (13,3)) (Int (Just (13,3))) [Init (Just (13,7)) (Ident "x") (ELitInt (Just (13,11)) 45)],SExp (Just (14,3)) (EApp (Just (14,3)) (Ident "printInt") [ELValue (Just (14,12)) (LVar (Just (14,12)) (Ident "x"))]),Ret (Just (15,3)) (ELitInt (Just (15,10)) 0)])]
+
+[Linearized tree]
+
+int main () {
+  int [] a = new int [10];
+  int j = 0;
+  while (j < a . length) {
+    a [j] = j;
+    j ++;
+    }
+  for (int x : a) printInt (x);
+  int x = 45;
+  printInt (x);
+  return 0;
+  }
+

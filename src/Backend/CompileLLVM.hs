@@ -354,13 +354,16 @@ getIdentFromLIdx (LIdx line expr _) = do
   case expr of
     (ELValue _ (LVar _ id)) ->
       return id
+    exprDebug -> do
+      debugString $ show exprDebug
+      return (Ident "xd")
 
 -- Analyse LValue --
 getIdentLValue :: LValue -> CM Ident
 getIdentLValue (LVar line id) = do
   return id
-getIdentLValue (LIdx line (ELValue _ lvalue) expr2) = do
-  getIdentFromLIdx lvalue
+getIdentLValue lidx = do
+  getIdentFromLIdx lidx
 
 -- compile exprs --
 -- always returns value or register which isn't a pointer --

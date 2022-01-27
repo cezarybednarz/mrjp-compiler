@@ -54,6 +54,7 @@ instance Show Val where
   show VBool   = show "Bool"
   show VString = show "String"
   show VVoid   = show "Void"
+  show (VArray v) = show "Array " ++ show v
 
 -- RetInfo --
 data RetInfo = Return Val
@@ -80,6 +81,6 @@ debug = do
   liftIO $ print $ "store:    " ++ show store
   liftIO $ print "---------\n"
 
-debugStr :: String -> SAM ()
-debugStr str =
+debugString :: String -> SAM ()
+debugString str =
   liftIO $ print str

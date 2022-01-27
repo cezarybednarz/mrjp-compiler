@@ -37,6 +37,9 @@ data SemanticAnalysisException
     | StringInvalidRel
     | ArrayWrongType 
     | WrongLValue
+    | WrongExpressionInArray
+    | WrongArrayTypeInForEach
+    | ForEachTypeMismatch Ident
     -- invalid expression as array name
 
 instance Show SemanticAnalysisException where
@@ -61,6 +64,9 @@ instance Show SemanticAnalysisException where
   show StringInvalidRel = "'==' and '!=' are the only valid relation operators on strings"
   show ArrayWrongType = "array has wrong type "
   show WrongLValue = "wrong lvalue"
+  show WrongExpressionInArray = "wrong expression in array brackets, should be of type int"
+  show WrongArrayTypeInForEach = "for loop should be iterated over an array"
+  show (ForEachTypeMismatch (Ident id)) = "variable " ++ show id ++ " should be different type"
 
 
 
