@@ -43,7 +43,8 @@ data LLVMStmt = Call Reg Type String [(Type, Val)]
               | AllocaArr Reg Type 
               | StoreArr Type Val Type Reg
               | LoadArr Reg Type Type Reg
-              | GetElementPtrArr Reg Val Type Reg
+              | GetElementPtrArr Reg Type Type Reg Type Val
+              -- %12 = getelementptr inbounds i32, i32* %11, i64 3
               | Sext Reg Type Val Type
               | Bitcast Reg Type Val Type
   deriving (Eq, Ord)
@@ -164,7 +165,11 @@ instance Show LLVMStmt where
   show (AllocaArr r1 t1) = show (Alloca r1 t1)
   show (StoreArr t1 v1 t2 r1) = show (Store t1 v1 t2 r1)
   show (LoadArr r1 t1 t2 r2) = show (Load r1 t1 t2 r2)
-  show (GetElementPtrArr r1 v1 t1 r2) = "todo getptr arr"
+  -- GetElementPtrArr Reg Type Type Reg Type Val
+  -- %12 = getelementptr inbounds i32, i32* %11, i64 3
+  show (GetElementPtrArr r1 t1 t2 r2 t3 v1) = show r1 
+    ++ " = getelementptr inbounds " ++ show t1 ++ ", " ++ show t2 
+    ++ " " ++ show r2 ++ ", " ++ show t3 ++ " " ++ show v1
   show (Sext r1 t1 v1 t2) = "todo sext"
   show (Bitcast r1 t1 v1 t2) = show r1 ++ " = bitcast " ++ show t1 ++ " " ++ show v1 
     ++ " to " ++ show t2

@@ -412,9 +412,29 @@ compileExpr :: Expr -> CM (LLVM.Type, Val)
 compileExpr (ELValue _ lvalue) = do
   id <- getIdentLValue lvalue
   (t, reg) <- getIdentTypeReg id
-  reg2 <- emitLoad t reg
-  -- todo sprawdzac czy tablice i emitoac loadArr
-  return (t, VReg reg2)
+  case lvalue of 
+    LIdx _ expr1 expr2 -> do
+      debugString $ "expr1: " ++ show expr1
+      debugString $ "expr2: " ++ show expr2
+      debugString $ "t: " ++ show t
+
+      let (Ptr tArr) = t
+      reg2 <- newRegister
+      (tVal, eVal) <- compileExpr expr2
+      case eVal of 
+        (VConst _) -> do
+          reg3 <- newRegister
+          emitStmt $ GetElementPtrArr reg3 tArr (Ptr tArr) reg Ti64 (VReg reg2)
+          return (t, VReg reg3)
+        _ -> do
+          reg3 <- newRegister
+          emitStmt $ Sext reg3 tVal eVal Ti64
+          reg4 <- newRegister
+          emitStmt $ GetElementPtrArr reg4 tArr (Ptr tArr) reg Ti64 (VReg reg3)
+          return (t, VReg reg4)
+    _ -> do
+      reg2 <- emitLoad t reg
+      return (t, VReg reg2)
 compileExpr (ELitInt _ i) = do
   return (Ti32, VConst i)
 compileExpr (ELitTrue _) = return (Ti1, VTrue)
@@ -576,6 +596,8 @@ compileStmt (Ass _ lvalue expr) = do
   id <- getIdentLValue lvalue
   (_, e) <- compileExpr expr
   (t, r) <- getIdentTypeReg id
+  --case t of 
+    -- todo
   emitStmt $ Store t e (Ptr t) r
   return (ReturnNothing, env)
 compileStmt (Incr l lvalue) = do
