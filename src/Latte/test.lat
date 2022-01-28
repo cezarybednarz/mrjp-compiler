@@ -2,5 +2,9 @@
 
 int main() {
   int[] t = new int[3];
-  printInt(t[2]);
+  int i = 0;
+  while (i < t.length) {
+    int x = t[i];
+    i++;
+  }
 }

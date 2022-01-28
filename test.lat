@@ -1,12 +1,7 @@
-int main(){
-	int x = 3;
-	int t[] = new int[30];
-	while (x > 0) {
-		x--;
-		int y = 3;
-		printInt(t.length);	
-	}
-	int y = 2;
-  printInt(y);
+
+int main() {
+	int[] t = new int[3];
+	t[2] = 3;
+	printInt(t[2]);
 	return 0;
 }

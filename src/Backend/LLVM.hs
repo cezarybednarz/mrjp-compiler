@@ -7,6 +7,8 @@ data Val = VConst Integer
          | VTrue
          | VFalse
          | VNone
+         -- array
+         | VNewArr Type Val
   deriving (Eq, Ord)
 
 newtype Reg = Reg Integer
@@ -37,6 +39,12 @@ data LLVMStmt = Call Reg Type String [(Type, Val)]
               | Cmp Reg Cond Type Val Val
               | Xor Reg Type Val Val
               | Phi Reg Type [(Val, Label)]
+              -- arrays
+              | AllocaArr Reg Type 
+              | StoreArr Type Val Type Reg
+              | LoadArr Reg Type Type Reg
+              | GetElementPtrArr Reg Val Type Reg
+              | Sext Reg Type Val Type
   deriving (Eq, Ord)
 
 data LLBlock = LLBlock { bLabel    :: Label,
@@ -107,6 +115,7 @@ instance Show Val where
     ++ show len ++ " x i8]* @.str." ++ show id ++ ", i32 0, i32 0)"
   show VTrue = "true"
   show VFalse = "false"
+  show VNewArr {} = "backend error: show for new array type"
 
 instance Show Label where
   show (Label l) = "L" ++ show l
@@ -150,6 +159,11 @@ instance Show LLVMStmt where
     ++ " " ++ show t ++ " " ++ show v1 ++ ", " ++ show v2
   show (Phi reg t phiArgs) = show reg ++ " = phi " ++ show t
     ++ " " ++ printPhiArgs True phiArgs
+  show (AllocaArr r1 t1) = show (Alloca r1 t1)
+  show (StoreArr t1 v1 t2 r1) = show (Store t1 v1 t2 r1)
+  show (LoadArr r1 t1 t2 r2) = show (Load r1 t1 t2 r2)
+  show (GetElementPtrArr r1 v1 t1 r2) = "todo getptr arr"
+  show (Sext r1 t1 v1 t2) = "todo sext"
 
 -- print llvm code from in-memory structures --
 

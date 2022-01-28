@@ -276,6 +276,9 @@ convTypeLLVMType t = do
       return $ Ptr Ti8
     Void _ ->
       return Tvoid
+    Array _ t -> do
+      t' <- convTypeLLVMType t
+      return $ Ptr t'
 
 convArgTofArg :: Arg -> CM (LLVM.Type, String)
 convArgTofArg (Arg _ t id) = do
@@ -354,16 +357,15 @@ getIdentFromLIdx (LIdx line expr _) = do
   case expr of
     (ELValue _ (LVar _ id)) ->
       return id
-    exprDebug -> do
-      debugString $ show exprDebug
-      return (Ident "xd")
 
 -- Analyse LValue --
 getIdentLValue :: LValue -> CM Ident
 getIdentLValue (LVar line id) = do
   return id
-getIdentLValue lidx = do
-  getIdentFromLIdx lidx
+getIdentLValue (LIdx line expr _) = do
+  case expr of 
+    (ELValue _ (LVar _ id)) ->
+      return id
 
 -- compile exprs --
 -- always returns value or register which isn't a pointer --
@@ -371,7 +373,8 @@ compileExpr :: Expr -> CM (LLVM.Type, Val)
 compileExpr (ELValue _ lvalue) = do
   id <- getIdentLValue lvalue
   (t, reg) <- getIdentTypeReg id
-  reg2 <- emitLoad t reg
+  reg2 <- emitLoad t reg 
+  -- todo sprawdzac czy tablice i emitoac loadArr
   return (t, VReg reg2)
 compileExpr (ELitInt _ i) = do
   return (Ti32, VConst i)
@@ -466,6 +469,13 @@ compileExpr (ERel _ expr1 op expr2) = do
       reg2 <- newRegister
       emitStmt $ Cmp reg2 cond Ti32 (VConst 1) (VReg reg)
       return (Ptr Ti8, VReg reg2)
+-- arr
+compileExpr (ENewArr _ t expr) = do
+  (t, e) <- compileExpr expr
+  return (t, VNewArr t e)
+compileExpr debugExpr = do
+  debugString $ " >>>> " ++ show debugExpr
+  return (Ti32, VNone)
 
 -- compile stmts helpers --
 compileBlock :: Stmt -> CM (RetInfo, Env)
@@ -622,3 +632,24 @@ compileStmt (While _ expr block) = do
   putInBlockForBlock lBlock lStart2
   putInBlockForBlock lEnd lStart2
   return (ReturnNothing, env)
+-- todo dla jednego statementa
+compileStmt (ForEach l t id expr (BStmt _ (Block _ blockStmts))) = do
+  let i = Ident "while"
+  env <- ask
+  let firstBlockStmt = 
+          Decl l 
+            (Int l) [
+              Init l id
+              (ELValue l (LIdx l expr (ELValue l (LVar l i))))
+            ]
+  let lastBlockStmt = Incr l (LVar l i)
+  let loopBlockStmts = 
+        [firstBlockStmt] ++ blockStmts ++ [lastBlockStmt]
+  let forEachStmt = 
+        BStmt l 
+        (Block l [
+          Decl l (Int l) [Init l i (ELitInt l 0)], 
+          While l (ERel l (ELValue l (LVar l i)) (LTH l) (ELength l expr)) 
+            (BStmt l (Block l loopBlockStmts))
+        ])
+  compileStmt forEachStmt

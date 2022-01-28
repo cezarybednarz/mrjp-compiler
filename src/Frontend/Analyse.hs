@@ -50,7 +50,6 @@ declareVar line id val = do
   else do
     (Just (loc, scope2)) <- asks (Map.lookup id . fst4)
     if scope1 == scope2 then do
-      debug
       throwError $ errMessage line (VariableRedeclared id)
     else do
       loc <- alloc
@@ -224,7 +223,7 @@ analyseLValue (LIdx line expr _) = do
 analyseExpr :: Expr -> SAM Val
 analyseExpr (ELValue line lvalue) = do
   (id, val) <- analyseLValue lvalue
-  getIdentVal line id
+  return val
 analyseExpr (ELitInt line i) = return VInt
 analyseExpr (ELitTrue line) = return VBool
 analyseExpr (ELitFalse line) = return VBool
@@ -326,9 +325,7 @@ declItem t (NoInit line id) = do
   return (valEnv, funcEnv, fnRetVal, scope)
 declItem t (Init line id e) = do
   (_, funcEnv, fnRetVal, scope) <- ask
-  n <- analyseExpr e
-  debugString $ "t: " ++ show t
-  debugString $ "n: " ++ show n
+  n <- analyseExpr e 
   goodTypes <- cmpTypeVal t n
   if goodTypes then do
     valEnv <- declareVar line id n
@@ -355,21 +352,15 @@ analyseStmt (Empty line) = do
   return (ReturnNothing, env)
 analyseStmt (BStmt line (Block line2 b)) = analyseBlock (BStmt line (Block line2 b))
 analyseStmt (Decl line t items) = do
-  debugString $ "decl !!!" ++ show items
   env <- analyseDecl t items
   return (ReturnNothing, env)
 analyseStmt (Ass line lvalue expr) = do
-  debugString $ "ass !!! lvalue: " ++ show lvalue ++ " expr: " ++ show expr
   (id, val) <- analyseLValue lvalue
   n <- analyseExpr expr
   l <- getIdentLoc line id
   env <- ask
   if n == val then do
-    debug
-    debugString $ "n: " ++ show n
-    debugString $ "l: " ++ show l
     analyseReassignment line id l n
-    --insertValue l n
     return (ReturnNothing, env)
   else
     throwError $ errMessage line $ AssTypeMismatch id
@@ -445,10 +436,6 @@ analyseStmt (ForEach line t id expr block) = do
   case expr of 
     (ELValue line2 (LVar line3 idArr)) -> do
       t' <- convTypeVal t
-      debug
-      debugString $ "idArr = " ++ show idArr
-      xd <- getIdentVal line3 idArr
-      debugString $ "getIdentVal line3 arr == " ++ show xd
       (VArray tArr) <- getIdentVal line3 idArr
       if tArr == t' then do
         (valEnv, funcEnv, fnRetVal, scope) <- ask
