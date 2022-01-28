@@ -5,6 +5,7 @@ declare i8* @readString()
 declare void @error()
 declare i32 @__equStrings__(i8*, i8*)
 declare i8* @__concatStrings__(i8*, i8*)
+declare i8* @malloc(i32) nounwind
 @.str.0 = private unnamed_addr constant [1 x i8] c"\00", align 1
 
 define i32 @d() {
@@ -16,7 +17,10 @@ L1:                              ; preds = [L0]
 define i32 @s(i32 %r0) {
   br label %L2
 L2:                              ; preds = [L0]
-  %r5 = add i32 %r0, 1
+  %r3 = alloca i32
+  store i32 %r0, i32* %r3
+  %r4 = load i32, i32* %r3
+  %r5 = add i32 %r4, 1
   ret i32 %r5
 }
 

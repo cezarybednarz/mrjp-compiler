@@ -8,7 +8,7 @@ data Val = VConst Integer
          | VFalse
          | VNone
          -- array
-         | VNewArr Type Val
+         | VArr Type Val
   deriving (Eq, Ord)
 
 newtype Reg = Reg Integer
@@ -45,6 +45,7 @@ data LLVMStmt = Call Reg Type String [(Type, Val)]
               | LoadArr Reg Type Type Reg
               | GetElementPtrArr Reg Val Type Reg
               | Sext Reg Type Val Type
+              | Bitcast Reg Type Val Type
   deriving (Eq, Ord)
 
 data LLBlock = LLBlock { bLabel    :: Label,
@@ -115,7 +116,8 @@ instance Show Val where
     ++ show len ++ " x i8]* @.str." ++ show id ++ ", i32 0, i32 0)"
   show VTrue = "true"
   show VFalse = "false"
-  show VNewArr {} = "backend error: show for new array type"
+  show VArr {} = "backend error: show for VNewArr"
+  show VNone = "backend error: show VNone"
 
 instance Show Label where
   show (Label l) = "L" ++ show l
@@ -164,6 +166,8 @@ instance Show LLVMStmt where
   show (LoadArr r1 t1 t2 r2) = show (Load r1 t1 t2 r2)
   show (GetElementPtrArr r1 v1 t1 r2) = "todo getptr arr"
   show (Sext r1 t1 v1 t2) = "todo sext"
+  show (Bitcast r1 t1 v1 t2) = show r1 ++ " = bitcast " ++ show t1 ++ " " ++ show v1 
+    ++ " to " ++ show t2
 
 -- print llvm code from in-memory structures --
 
@@ -269,7 +273,8 @@ printLLVMProgram strConstants fns =
     "declare i8* @readString()",
     "declare void @error()",
     "declare i32 @__equStrings__(i8*, i8*)",
-    "declare i8* @__concatStrings__(i8*, i8*)"
+    "declare i8* @__concatStrings__(i8*, i8*)",
+    "declare i8* @malloc(i32) nounwind"
   ]
   ++
   printStrConstants strConstants

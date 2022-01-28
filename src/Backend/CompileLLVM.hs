@@ -59,8 +59,15 @@ getIdentTypeReg :: Ident -> CM (LLVM.Type, Reg)
 getIdentTypeReg id = do
   env <- ask
   let valEnv = eValEnv env
-  let Just (t, reg, _) = Map.lookup id valEnv
+  let Just (t, reg, _, _) = Map.lookup id valEnv
   return (t, reg)
+
+getIdentArrLength :: Ident -> CM ArrLength
+getIdentArrLength id = do
+  env <- ask
+  let valEnv = eValEnv env
+  let Just (_, _, _, l) = Map.lookup id valEnv
+  return l
 
 getLastBlock :: CM LLBlock
 getLastBlock = do
@@ -102,7 +109,7 @@ getScope :: Ident -> CM Scope
 getScope id = do
   env <- ask
   let valEnv = eValEnv env
-  let Just (_, _, scope) = Map.lookup id valEnv
+  let Just (_, _, scope, _) = Map.lookup id valEnv
   return scope
 
 getLabel :: CM Label
@@ -162,12 +169,22 @@ emitArgsDecl :: Reg -> [(LLVM.Type, String)] -> CM Env
 emitArgsDecl reg [] = ask
 emitArgsDecl reg ((t, strId):args) = do
   env <- ask
-  reg2 <- newRegister
-  emitStmt $ Alloca reg2 t
-  emitStmt $ Store t (VReg reg) (Ptr t) reg2
-  newValEnv <- declareVarInEnv t (Ident strId) reg2
-  let (Reg r) = reg
-  local (const (env {eValEnv = newValEnv})) $ emitArgsDecl (Reg (r + 1)) args
+  case t of
+    _ -> do
+      -- todo wyrzucic caly blok
+      reg2 <- newRegister
+      emitStmt $ Alloca reg2 t
+      emitStmt $ Store t (VReg reg) (Ptr t) reg2
+      newValEnv <- declareVarInEnv t (Ident strId) reg2 Nothing
+      let (Reg r) = reg
+      local (const (env {eValEnv = newValEnv})) $ emitArgsDecl (Reg (r + 1)) args
+    _ -> do
+      reg2 <- newRegister
+      emitStmt $ Alloca reg2 t
+      emitStmt $ Store t (VReg reg) (Ptr t) reg2
+      newValEnv <- declareVarInEnv t (Ident strId) reg2 Nothing
+      let (Reg r) = reg
+      local (const (env {eValEnv = newValEnv})) $ emitArgsDecl (Reg (r + 1)) args
 
 -- emit string constant --
 emitStrConst :: String -> CM (Int, Int)
@@ -227,12 +244,16 @@ emitNewBlock label = do
   return ()
 
 -- allocating and inserting registers to env and store without emmiting --
-declareVarInEnv :: LLVM.Type -> Ident -> Reg -> CM ValEnv
-declareVarInEnv t id reg = do
+declareVarInEnv :: LLVM.Type -> Ident -> Reg -> Maybe ArrLength -> CM ValEnv
+declareVarInEnv t id reg arrLength = do
   env <- ask
   let valEnv = eValEnv env
   let scope = eScope env
-  let newValEnv = Map.insert id (t, reg, scope) valEnv
+  let newValEnv = case arrLength of
+          Nothing -> do
+            Map.insert id (t, reg, scope, ArrLength (VConst 0)) valEnv
+          (Just l) -> do
+            Map.insert id (t, reg, scope, l) valEnv
   return newValEnv
 
 -- emit declaration of item --
@@ -249,17 +270,34 @@ emitDeclItem t (NoInit line id) = do
       emitStmt $ Store Ti1 (VConst 0) (Ptr Ti1) reg
     Str _ -> do
       emitStmt $ Store (Ptr Ti8) (VGetElementPtr 0 1 "") (Ptr (Ptr Ti8)) reg
-  newValEnv <- declareVarInEnv llvmtype id reg
+    -- todo moze string?
+  newValEnv <- declareVarInEnv llvmtype id reg Nothing
   return $ env { eValEnv = newValEnv }
 emitDeclItem t (Init line id e) = do
   env <- ask
   llvmtype <- convTypeLLVMType t
   (_, exprVal) <- compileExpr e
-  reg <- newRegister
-  emitStmt $ Alloca reg llvmtype
-  emitStmt $ Store llvmtype exprVal (Ptr llvmtype) reg
-  newValEnv <- declareVarInEnv llvmtype id reg
-  return $ env { eValEnv = newValEnv }
+  case t of
+    (Array _ tArr) -> do
+      let (VArr arrType arrSizeVal) = exprVal
+      reg <- newRegister
+      let sizeOf = case arrType of
+            Ti32 -> 4
+            Ti1 -> 1
+            Ptr _ -> 8 -- todo sprawdzic sizeof pointera na stringi
+      emitStmt $ Arithm reg Ti32 (VConst sizeOf) arrSizeVal Mul
+      reg2 <- newRegister
+      emitStmt $ Call reg2 (Ptr Ti8) "malloc" [(Ti32, VReg reg)]
+      reg3 <- newRegister
+      emitStmt $ Bitcast reg3 (Ptr Ti8) (VReg reg2) (Ptr arrType)
+      newValEnv <- declareVarInEnv llvmtype id reg3 (Just (ArrLength arrSizeVal))
+      return $ env { eValEnv = newValEnv}
+    notArray -> do
+      reg <- newRegister
+      emitStmt $ Alloca reg llvmtype
+      emitStmt $ Store llvmtype exprVal (Ptr llvmtype) reg
+      newValEnv <- declareVarInEnv llvmtype id reg Nothing
+      return $ env { eValEnv = newValEnv }
 
 -- convert between latte and llvm types --
 convIdentString :: Ident -> CM String
@@ -337,6 +375,7 @@ compileTopDef (FnDef line t id args b) = do
         emitStmt $ LLVM.Ret Ti1 VFalse
       (Ptr Ti8) -> do
         emitStmt $ LLVM.Ret (Ptr Ti8) (VGetElementPtr 0 1 "")
+      -- todo arrays
   reg <- getRegister
   --debugString $ show id
   --debugString $ show reg
@@ -363,7 +402,7 @@ getIdentLValue :: LValue -> CM Ident
 getIdentLValue (LVar line id) = do
   return id
 getIdentLValue (LIdx line expr _) = do
-  case expr of 
+  case expr of
     (ELValue _ (LVar _ id)) ->
       return id
 
@@ -373,7 +412,7 @@ compileExpr :: Expr -> CM (LLVM.Type, Val)
 compileExpr (ELValue _ lvalue) = do
   id <- getIdentLValue lvalue
   (t, reg) <- getIdentTypeReg id
-  reg2 <- emitLoad t reg 
+  reg2 <- emitLoad t reg
   -- todo sprawdzac czy tablice i emitoac loadArr
   return (t, VReg reg2)
 compileExpr (ELitInt _ i) = do
@@ -471,11 +510,19 @@ compileExpr (ERel _ expr1 op expr2) = do
       return (Ptr Ti8, VReg reg2)
 -- arr
 compileExpr (ENewArr _ t expr) = do
-  (t, e) <- compileExpr expr
-  return (t, VNewArr t e)
-compileExpr debugExpr = do
-  debugString $ " >>>> " ++ show debugExpr
-  return (Ti32, VNone)
+  t' <- convTypeLLVMType t
+  (_, e) <- compileExpr expr
+  return (t', VArr t' e)
+compileExpr (ELength line lvalue) = do
+  (t, e) <- compileExpr lvalue
+  case e of
+    (VArr t len) -> return (Ti32, len)
+    reg -> do
+      case lvalue of 
+        ELValue l lval -> do
+          id <- getIdentLValue lval
+          (ArrLength len) <- getIdentArrLength id
+          return (Ti32, len)
 
 -- compile stmts helpers --
 compileBlock :: Stmt -> CM (RetInfo, Env)
@@ -634,22 +681,23 @@ compileStmt (While _ expr block) = do
   return (ReturnNothing, env)
 -- todo dla jednego statementa
 compileStmt (ForEach l t id expr (BStmt _ (Block _ blockStmts))) = do
-  let i = Ident "while"
+  (Reg r) <- getRegister
+  let i = Ident $ "while" ++ show r
   env <- ask
-  let firstBlockStmt = 
-          Decl l 
+  let firstBlockStmt =
+          Decl l
             (Int l) [
               Init l id
               (ELValue l (LIdx l expr (ELValue l (LVar l i))))
             ]
   let lastBlockStmt = Incr l (LVar l i)
-  let loopBlockStmts = 
+  let loopBlockStmts =
         [firstBlockStmt] ++ blockStmts ++ [lastBlockStmt]
-  let forEachStmt = 
-        BStmt l 
+  let forEachStmt =
+        BStmt l
         (Block l [
-          Decl l (Int l) [Init l i (ELitInt l 0)], 
-          While l (ERel l (ELValue l (LVar l i)) (LTH l) (ELength l expr)) 
+          Decl l (Int l) [Init l i (ELitInt l 0)],
+          While l (ERel l (ELValue l (LVar l i)) (LTH l) (ELength l expr))
             (BStmt l (Block l loopBlockStmts))
         ])
   compileStmt forEachStmt

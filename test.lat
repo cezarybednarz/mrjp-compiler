@@ -1,7 +1,7 @@
 
 int main() {
-	int[] t = new int[3];
-	t[2] = 3;
-	printInt(t[2]);
+	boolean[] t = new boolean[3];
+	t[2] = true;
+	printInt(t.length);
 	return 0;
 }
