@@ -88,6 +88,15 @@ data LLVMProgram = LLVMProgram {
 }
   deriving (Show, Eq, Ord)
 
+-- helper for arrays -- 
+
+isArrayType :: Type -> Bool
+isArrayType t = 
+  case t of 
+    (Ptr Ti32) -> True
+    (Ptr Ti1) -> True
+    (Ptr (Ptr Ti8)) -> True
+    _ -> False
 
 -- show for llvm types --
 
@@ -248,13 +257,35 @@ printLLBlocks first (block:blocks) = do
 printArgs :: Bool -> Integer -> [(Type, String)] -> String
 printArgs _ _ [] = []
 printArgs first register ((t, _):args) =
-  (if first then "" else ", ")
-  ++
-  show t ++ " "
-  ++
-  show (Reg register)
-  ++
-  printArgs False (register + 1) args
+  case t of 
+    (Ptr Ti32) -> 
+      printArrArgs
+    (Ptr Ti1) -> 
+      printArrArgs
+    (Ptr (Ptr Ti8)) -> 
+      printArrArgs
+    _ -> 
+      (if first then "" else ", ")
+      ++
+      show t ++ " "
+      ++
+      show (Reg register)
+      ++
+      printArgs False (register + 1) args
+  where 
+    printArrArgs = 
+      (if first then "" else ", ")
+      ++
+      show t ++ " "
+      ++
+      show (Reg register)
+      ++
+      ", " ++ show Ti32 ++ " "
+      ++ 
+      show (Reg (register + 1))
+      ++
+      printArgs False (register + 2) args
+
 
 printFunctions :: [Fn] -> [String]
 printFunctions [] = []

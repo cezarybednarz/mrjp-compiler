@@ -1,13 +1,14 @@
 
+void printLength(int[] x) {
+	for (int a : x) {
+		printInt(a);
+	}
+}
+
 int main() {
-	string[] t = new string[2];
-	t[0] = "hello";
-	t[1] = "world";
-	for (string b : t) 
-		printString(b);
-	
-	
-	
-	
+	int[] t = new int[2];
+	t[0] = 1;
+	t[1] = 69;
+	printLength(t);
 	return 0;
 }

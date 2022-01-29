@@ -168,23 +168,34 @@ emitLoad t reg = do
 emitArgsDecl :: Reg -> [(LLVM.Type, String)] -> CM Env
 emitArgsDecl reg [] = ask
 emitArgsDecl reg ((t, strId):args) = do
-  env <- ask
   case t of
-    _ -> do
-      -- todo wyrzucic caly blok
+    (Ptr Ti32) -> do -- array type arguments
+      emitArrArgDecl (Ptr Ti32) 
+    (Ptr Ti1) -> do
+      emitArrArgDecl (Ptr Ti1) 
+    (Ptr (Ptr Ti8)) ->
+      emitArrArgDecl (Ptr (Ptr Ti8))
+    _ -> do -- normal type argument
+      env <- ask
       reg2 <- newRegister
       emitStmt $ Alloca reg2 t
       emitStmt $ Store t (VReg reg) (Ptr t) reg2
       newValEnv <- declareVarInEnv t (Ident strId) reg2 Nothing
       let (Reg r) = reg
       local (const (env {eValEnv = newValEnv})) $ emitArgsDecl (Reg (r + 1)) args
-    _ -> do
-      reg2 <- newRegister
-      emitStmt $ Alloca reg2 t
-      emitStmt $ Store t (VReg reg) (Ptr t) reg2
-      newValEnv <- declareVarInEnv t (Ident strId) reg2 Nothing
+  where 
+    emitArrArgDecl arrType = do
+      env <- ask
       let (Reg r) = reg
-      local (const (env {eValEnv = newValEnv})) $ emitArgsDecl (Reg (r + 1)) args
+      let lenReg = Reg (r + 1)
+      let arrLength = Just (ArrLength (VReg lenReg))
+      --reg2 <- newRegister
+      --emitStmt $ Alloca reg2 Ti32  -- storing length of array
+      --emitStmt $ Store Ti32 (VReg lenReg) (Ptr Ti32) reg2
+      
+      newValEnv <- declareVarInEnv arrType (Ident strId) reg arrLength
+      local (const (env {eValEnv = newValEnv})) 
+        $ emitArgsDecl (Reg (r + 2)) args
 
 -- emit string constant --
 emitStrConst :: String -> CM (Int, Int)
@@ -204,6 +215,20 @@ emitFirstLabel label = do
   emitStmtForLabel (Br label2) (Label 0)
   putInBlockForBlock label2 (Label 0)
 
+getNumberOfArrArgs :: [(LLVM.Type, String)] -> CM Int
+getNumberOfArrArgs [] = return 0
+getNumberOfArrArgs ((t, _):args) = do
+  num <- getNumberOfArrArgs args 
+  case t of 
+    (Ptr Ti32) -> do
+      return (num + 1)
+    (Ptr Ti1) -> do
+      return (num + 1)
+    (Ptr (Ptr Ti8)) -> do
+      return (num + 1)
+    _ -> 
+      return num
+
 -- add function to compiler state --
 emitFunction :: Label -> LLVM.Type -> String -> [(LLVM.Type, String)] -> CM Env
 emitFunction label t name args = do
@@ -221,10 +246,14 @@ emitFunction label t name args = do
     sCurrReg = Reg 0
   }
   emitNewBlock label
-  setRegister $ Reg (toInteger $ length args + 1)
+  numOfArrArgs <- getNumberOfArrArgs args
+  setRegister $ Reg (toInteger $ length args + numOfArrArgs + 1)
   label2 <- getLabel
   emitFirstLabel label
   emitArgsDecl (Reg 0) args
+    
+
+        
 
 
 -- add empty block to current function --
@@ -279,6 +308,7 @@ emitDeclItem t (Init line id e) = do
   (_, exprVal) <- compileExpr e
   case t of
     (Array _ tArr) -> do
+      debugString $ show exprVal
       let (VArr arrType arrSizeVal) = exprVal
       reg <- newRegister
       let sizeOf = case arrType of
@@ -324,6 +354,18 @@ convArgTofArg (Arg _ t id) = do
   llvmtype <- convTypeLLVMType t
   return (llvmtype, ident)
 
+
+convArgsTofArgs :: [Arg] -> CM [(LLVM.Type, String)]
+convArgsTofArgs [] = return []
+convArgsTofArgs ((Arg l t id):args) = do
+  finalArgs <- convArgsTofArgs args
+  arg <- convArgTofArg (Arg l t id)
+  case t of
+    (Array l t') -> do
+      return $ arg : ((Ti32, "length") : finalArgs) -- add length of array
+    _ -> do
+      return $ arg : finalArgs
+      
 convRelOpCond :: RelOp -> Cond
 convRelOpCond relOp =
   case relOp of
@@ -335,10 +377,11 @@ convRelOpCond relOp =
     NE _  -> RelNE
 
 -- add function types to compiler state --
+
 addFnTypesToState :: [TopDef] -> CM ()
 addFnTypesToState [] = return ()
 addFnTypesToState ((FnDef line t id args b):fns) = do
-  fArgs <- mapM convArgTofArg args
+  fArgs <- convArgsTofArgs args
   llvmtype <- convTypeLLVMType t
   let (Ident name) = id
   state <- get
@@ -377,8 +420,6 @@ compileTopDef (FnDef line t id args b) = do
         emitStmt $ LLVM.Ret (Ptr Ti8) (VGetElementPtr 0 1 "")
       -- todo arrays
   reg <- getRegister
-  --debugString $ show id
-  --debugString $ show reg
   setCurrFnMaxRegister reg
 
 
@@ -386,9 +427,15 @@ compileTopDef (FnDef line t id args b) = do
 compileExprList :: [Expr] -> CM [Val]
 compileExprList [] = return []
 compileExprList (expr:exprs) = do
-  (_, v) <- compileExpr expr
+  (t, v) <- compileExpr expr
   valList <- compileExprList exprs
-  return $ v : valList
+  case expr of 
+    (ELValue _ (LVar _ id)) -> do
+      (ArrLength len) <- getIdentArrLength id
+      return $ v : (len : valList) 
+    _ -> do
+      return $ v : valList
+
 
 -- get ident from array -- 
 getIdentFromLIdx :: LValue -> CM Ident
@@ -418,7 +465,6 @@ compileConvToTi64 val = do
       emitStmt $ Sext reg Ti32 val Ti64
       return (VReg reg)
 
-
 -- always returns value or register which isn't a pointer --
 compileExpr :: Expr -> CM (LLVM.Type, Val)
 compileExpr (ELValue _ lvalue) = do
@@ -435,8 +481,11 @@ compileExpr (ELValue _ lvalue) = do
       emitStmt $ LoadArr reg5 tArr (Ptr tArr) reg4
       return (tArr, VReg reg5)
     _ -> do
-      reg2 <- emitLoad t reg
-      return (t, VReg reg2)
+      if (isArrayType t) then do 
+        return (t, VReg reg)
+      else do
+        reg2 <- emitLoad t reg
+        return (t, VReg reg2)
 compileExpr (ELitInt _ i) = do
   return (Ti32, VConst i)
 compileExpr (ELitTrue _) = return (Ti1, VTrue)
@@ -706,7 +755,6 @@ compileStmt (While _ expr block) = do
   putInBlockForBlock lBlock lStart2
   putInBlockForBlock lEnd lStart2
   return (ReturnNothing, env)
--- todo dla jednego statementa
 compileStmt (ForEach l t id expr (BStmt _ (Block _ blockStmts))) = do
   (Reg r) <- getRegister
   let i = Ident $ "while" ++ show r
