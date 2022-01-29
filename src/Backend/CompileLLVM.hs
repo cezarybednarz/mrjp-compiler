@@ -728,3 +728,5 @@ compileStmt (ForEach l t id expr (BStmt _ (Block _ blockStmts))) = do
             (BStmt l (Block l loopBlockStmts))
         ])
   compileStmt forEachStmt
+compileStmt (ForEach l t id expr stmtExpr) = do
+  compileStmt (ForEach l t id expr (BStmt l (Block l [stmtExpr])))
