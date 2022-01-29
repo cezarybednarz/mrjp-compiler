@@ -170,7 +170,8 @@ instance Show LLVMStmt where
   show (GetElementPtrArr r1 t1 t2 r2 t3 v1) = show r1 
     ++ " = getelementptr inbounds " ++ show t1 ++ ", " ++ show t2 
     ++ " " ++ show r2 ++ ", " ++ show t3 ++ " " ++ show v1
-  show (Sext r1 t1 v1 t2) = "todo sext"
+  show (Sext r1 t1 v1 t2) = show r1 ++ " = sext " ++ show t1 ++ " " 
+    ++ show v1 ++ " to " ++ show t2
   show (Bitcast r1 t1 v1 t2) = show r1 ++ " = bitcast " ++ show t1 ++ " " ++ show v1 
     ++ " to " ++ show t2
 

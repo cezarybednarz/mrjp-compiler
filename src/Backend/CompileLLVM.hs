@@ -291,7 +291,7 @@ emitDeclItem t (Init line id e) = do
       reg3 <- newRegister
       emitStmt $ Bitcast reg3 (Ptr Ti8) (VReg reg2) (Ptr arrType)
       newValEnv <- declareVarInEnv llvmtype id reg3 (Just (ArrLength arrSizeVal))
-      return $ env { eValEnv = newValEnv}
+      return $ env { eValEnv = newValEnv }
     notArray -> do
       reg <- newRegister
       emitStmt $ Alloca reg llvmtype
@@ -407,6 +407,18 @@ getIdentLValue (LIdx line expr _) = do
       return id
 
 -- compile exprs --
+-- convert variable to i64 (array indexes) -- 
+compileConvToTi64 :: Val -> CM Val
+compileConvToTi64 val = do
+  case val of 
+    (VConst _) -> do
+      return val
+    _ -> do
+      reg <- newRegister
+      emitStmt $ Sext reg Ti32 val Ti64
+      return (VReg reg)
+
+
 -- always returns value or register which isn't a pointer --
 compileExpr :: Expr -> CM (LLVM.Type, Val)
 compileExpr (ELValue _ lvalue) = do
@@ -414,24 +426,14 @@ compileExpr (ELValue _ lvalue) = do
   (t, reg) <- getIdentTypeReg id
   case lvalue of 
     LIdx _ expr1 expr2 -> do
-      debugString $ "expr1: " ++ show expr1
-      debugString $ "expr2: " ++ show expr2
-      debugString $ "t: " ++ show t
-
       let (Ptr tArr) = t
-      reg2 <- newRegister
       (tVal, eVal) <- compileExpr expr2
-      case eVal of 
-        (VConst _) -> do
-          reg3 <- newRegister
-          emitStmt $ GetElementPtrArr reg3 tArr (Ptr tArr) reg Ti64 (VReg reg2)
-          return (t, VReg reg3)
-        _ -> do
-          reg3 <- newRegister
-          emitStmt $ Sext reg3 tVal eVal Ti64
-          reg4 <- newRegister
-          emitStmt $ GetElementPtrArr reg4 tArr (Ptr tArr) reg Ti64 (VReg reg3)
-          return (t, VReg reg4)
+      vId <- compileConvToTi64 eVal
+      reg4 <- newRegister
+      emitStmt $ GetElementPtrArr reg4 tArr (Ptr tArr) reg Ti64 vId
+      reg5 <- newRegister
+      emitStmt $ LoadArr reg5 tArr (Ptr tArr) reg4
+      return (tArr, VReg reg5)
     _ -> do
       reg2 <- emitLoad t reg
       return (t, VReg reg2)
@@ -534,15 +536,11 @@ compileExpr (ENewArr _ t expr) = do
   (_, e) <- compileExpr expr
   return (t', VArr t' e)
 compileExpr (ELength line lvalue) = do
-  (t, e) <- compileExpr lvalue
-  case e of
-    (VArr t len) -> return (Ti32, len)
-    reg -> do
-      case lvalue of 
-        ELValue l lval -> do
-          id <- getIdentLValue lval
-          (ArrLength len) <- getIdentArrLength id
-          return (Ti32, len)
+  case lvalue of 
+    ELValue l lval -> do
+      id <- getIdentLValue lval
+      (ArrLength len) <- getIdentArrLength id
+      return (Ti32, len)
 
 -- compile stmts helpers --
 compileBlock :: Stmt -> CM (RetInfo, Env)
@@ -595,10 +593,17 @@ compileStmt (Ass _ lvalue expr) = do
   env <- ask
   id <- getIdentLValue lvalue
   (_, e) <- compileExpr expr
-  (t, r) <- getIdentTypeReg id
-  --case t of 
-    -- todo
-  emitStmt $ Store t e (Ptr t) r
+  case lvalue of 
+      (LIdx _ _ exprId) -> do
+        (_, idxVal) <- compileExpr exprId
+        (Ptr t, r) <- getIdentTypeReg id
+        reg <- newRegister
+        newIdxVal <- compileConvToTi64 idxVal
+        emitStmt $ GetElementPtrArr reg t (Ptr t) r Ti64 newIdxVal
+        emitStmt $ Store t e (Ptr t) reg
+      _ -> do 
+        (t, r) <- getIdentTypeReg id
+        emitStmt $ Store t e (Ptr t) r
   return (ReturnNothing, env)
 compileStmt (Incr l lvalue) = do
   env <- ask
@@ -708,7 +713,7 @@ compileStmt (ForEach l t id expr (BStmt _ (Block _ blockStmts))) = do
   env <- ask
   let firstBlockStmt =
           Decl l
-            (Int l) [
+            t [
               Init l id
               (ELValue l (LIdx l expr (ELValue l (LVar l i))))
             ]

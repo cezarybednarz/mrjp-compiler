@@ -1,7 +1,11 @@
 
 int main() {
-	int[] t = new int[3];
-	t[2] = 4;
-	printInt(t[2]);
+	string[] t = new string[2];
+	t[0] = "hello";
+	t[1] = "world";
+	for (string b : t) {
+		printString(b);
+	}
+	
 	return 0;
 }

@@ -22,7 +22,7 @@ All used modules are defined in `package.yaml` in the main directory.
  - GCSE: global common subexpression elimination
 
 ## Extensions 
- - no additional extensions, except for optimizations, were added
+ - arrays with foreach loop
 
 ## File structure
  - `lib/runtime.bc`: 
