@@ -189,10 +189,6 @@ emitArgsDecl reg ((t, strId):args) = do
       let (Reg r) = reg
       let lenReg = Reg (r + 1)
       let arrLength = Just (ArrLength (VReg lenReg))
-      --reg2 <- newRegister
-      --emitStmt $ Alloca reg2 Ti32  -- storing length of array
-      --emitStmt $ Store Ti32 (VReg lenReg) (Ptr Ti32) reg2
-      
       newValEnv <- declareVarInEnv arrType (Ident strId) reg arrLength
       local (const (env {eValEnv = newValEnv})) 
         $ emitArgsDecl (Reg (r + 2)) args
@@ -308,14 +304,15 @@ emitDeclItem t (Init line id e) = do
   (_, exprVal) <- compileExpr e
   case t of
     (Array _ tArr) -> do
-      debugString $ show exprVal
       let (VArr arrType arrSizeVal) = exprVal
       reg <- newRegister
       let sizeOf = case arrType of
             Ti32 -> 4
             Ti1 -> 1
-            Ptr _ -> 8 -- todo sprawdzic sizeof pointera na stringi
+            Ptr _ -> 8 
       emitStmt $ Arithm reg Ti32 (VConst sizeOf) arrSizeVal Mul
+      --reg1 <- newRegister 
+      --emitStmt $ Arithm reg1 Ti32 (VConst 4) arrSizeVal Add -- size of array
       reg2 <- newRegister
       emitStmt $ Call reg2 (Ptr Ti8) "malloc" [(Ti32, VReg reg)]
       reg3 <- newRegister
@@ -418,7 +415,6 @@ compileTopDef (FnDef line t id args b) = do
         emitStmt $ LLVM.Ret Ti1 VFalse
       (Ptr Ti8) -> do
         emitStmt $ LLVM.Ret (Ptr Ti8) (VGetElementPtr 0 1 "")
-      -- todo arrays
   reg <- getRegister
   setCurrFnMaxRegister reg
 
@@ -429,12 +425,13 @@ compileExprList [] = return []
 compileExprList (expr:exprs) = do
   (t, v) <- compileExpr expr
   valList <- compileExprList exprs
-  case expr of 
-    (ELValue _ (LVar _ id)) -> do
-      (ArrLength len) <- getIdentArrLength id
-      return $ v : (len : valList) 
-    _ -> do
-      return $ v : valList
+  if isArrayType t then do 
+    case expr of 
+      (ELValue _ (LVar _ id)) -> do
+        (ArrLength len) <- getIdentArrLength id
+        return $ v : (len : valList) 
+  else
+    return $ v : valList
 
 
 -- get ident from array -- 
