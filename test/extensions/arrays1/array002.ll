@@ -136,4 +136,74 @@ L1:                              ; preds = [L0]
   %r2 = mul i32 4, 5
   %r3 = call i8* @malloc(i32 %r2)
   %r4 = bitcast i8* %r3 to i32*
-  %r5 = a
+  %r5 = alloca i32
+  store i32 0, i32* %r5
+  br label %L6
+L6:                              ; preds = [L1,L9]
+  %r7 = load i32, i32* %r5
+  %r8 = icmp slt i32 %r7, 5
+  br i1 %r8, label %L9, label %L16
+L9:                              ; preds = [L6]
+  %r10 = load i32, i32* %r5
+  %r11 = load i32, i32* %r5
+  %r13 = sext i32 %r11 to i64
+  %r12 = getelementptr inbounds i32, i32* %r4, i64 %r13
+  store i32 %r10, i32* %r12
+  %r14 = load i32, i32* %r5
+  %r15 = add i32 %r14, 1
+  store i32 %r15, i32* %r5
+  br label %L6
+L16:                              ; preds = [L6]
+  call void @shiftLeft(i32* %r4, i32 5)
+  %r17 = call %ArrRetVal* @doubleArray(i32* %r4, i32 5)
+  %r18 = getelementptr inbounds %ArrRetVal, %ArrRetVal* %r17, i32 0, i32 0
+  %r19 = load i32, i32* %r18
+  %r20 = getelementptr inbounds %ArrRetVal, %ArrRetVal* %r17, i32 0, i32 1
+  %r21 = load i32*, i32** %r20
+  %r22 = alloca i32
+  store i32 0, i32* %r22
+  br label %L23
+L23:                              ; preds = [L16,L26]
+  %r24 = load i32, i32* %r22
+  %r25 = icmp slt i32 %r24, 5
+  br i1 %r25, label %L26, label %L35
+L26:                              ; preds = [L23]
+  %r27 = load i32, i32* %r22
+  %r28 = sext i32 %r27 to i64
+  %r29 = getelementptr inbounds i32, i32* %r4, i64 %r28
+  %r30 = load i32, i32* %r29
+  %r31 = alloca i32
+  store i32 %r30, i32* %r31
+  %r32 = load i32, i32* %r31
+  call void @printInt(i32 %r32)
+  %r33 = load i32, i32* %r22
+  %r34 = add i32 %r33, 1
+  store i32 %r34, i32* %r22
+  br label %L23
+L35:                              ; preds = [L23]
+  %r36 = alloca i32
+  store i32 0, i32* %r36
+  br label %L37
+L37:                              ; preds = [L35,L40]
+  %r38 = load i32, i32* %r36
+  %r39 = icmp slt i32 %r38, %r19
+  br i1 %r39, label %L40, label %L49
+L40:                              ; preds = [L37]
+  %r41 = load i32, i32* %r36
+  %r42 = sext i32 %r41 to i64
+  %r43 = getelementptr inbounds i32, i32* %r21, i64 %r42
+  %r44 = load i32, i32* %r43
+  %r45 = alloca i32
+  store i32 %r44, i32* %r45
+  %r46 = load i32, i32* %r45
+  call void @printInt(i32 %r46)
+  %r47 = load i32, i32* %r36
+  %r48 = add i32 %r47, 1
+  store i32 %r48, i32* %r36
+  br label %L37
+L49:                              ; preds = [L37]
+  %r50 = call i32 @scalProd(i32* %r4, i32 5, i32* %r21, i32 %r19)
+  call void @printInt(i32 %r50)
+  ret i32 0
+}
+

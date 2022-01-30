@@ -1,15 +1,17 @@
 
 
-string[] same(string[] x) {
+int[] same(int[] x) {
+	x[1] = x[1] + 1;
 	return x;
 }
 
 
 int main() {
-	string[] t = new string[2];
-	t[0] = "1";
-	t[1] = "69";
-	string[] t2 = same(t);
-	printString(t2[1]);
+	int[] t = new int[2];
+	t[0] = 420;
+	t[1] = 69;
+	int[] t2 = same(t);
+	printInt(t2[1]);
 	return 0;
+
 }

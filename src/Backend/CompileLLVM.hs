@@ -304,20 +304,8 @@ emitDeclItem t (Init line id e) = do
   (_, exprVal) <- compileExpr e
   case t of
     (Array _ tArr) -> do
-      let (VArr _ arrType arrSizeVal) = exprVal
-      reg <- newRegister
-      let sizeOf = case arrType of
-            Ti32 -> 4
-            Ti1 -> 1
-            Ptr _ -> 8 
-      emitStmt $ Arithm reg Ti32 (VConst sizeOf) arrSizeVal Mul
-      --reg1 <- newRegister 
-      --emitStmt $ Arithm reg1 Ti32 (VConst 4) arrSizeVal Add -- size of array
-      reg2 <- newRegister
-      emitStmt $ Call reg2 (Ptr Ti8) "malloc" [(Ti32, VReg reg)]
-      reg3 <- newRegister
-      emitStmt $ Bitcast reg3 (Ptr Ti8) (VReg reg2) (Ptr arrType)
-      newValEnv <- declareVarInEnv llvmtype id reg3 (Just (ArrLength arrSizeVal))
+      let (VArr arrReg arrType arrSizeVal) = exprVal
+      newValEnv <- declareVarInEnv llvmtype id arrReg (Just (ArrLength arrSizeVal))
       return $ env { eValEnv = newValEnv }
     notArray -> do
       reg <- newRegister
@@ -506,7 +494,7 @@ compileExpr (EApp _ id exprs) = do
     emitStmt $ GetElementPtrRetArr reg4 TArr (Ptr TArr) reg Ti32 (VConst 0) Ti32 (VConst structId) 
     reg5 <- newRegister
     emitStmt $ LoadArr reg5 t (Ptr t) reg4
-    return (t, VArr reg5 t (VReg reg3))
+    return (t, VArr reg5 t' (VReg reg3))
   else do 
     case t of
       Tvoid -> do
@@ -594,8 +582,19 @@ compileExpr (ERel _ expr1 op expr2) = do
 -- arr
 compileExpr (ENewArr _ t expr) = do
   t' <- convTypeLLVMType t
-  (_, e) <- compileExpr expr
-  return (t', VArr (Reg 0) t' e) -- todo -1
+  (_, arrSizeVal) <- compileExpr expr
+
+  reg <- newRegister
+  let sizeOf = case t' of
+        Ti32 -> 4
+        Ti1 -> 1
+        Ptr _ -> 8 
+  emitStmt $ Arithm reg Ti32 (VConst sizeOf) arrSizeVal Mul
+  reg2 <- newRegister
+  emitStmt $ Call reg2 (Ptr Ti8) "malloc" [(Ti32, VReg reg)]
+  reg3 <- newRegister
+  emitStmt $ Bitcast reg3 (Ptr Ti8) (VReg reg2) (Ptr t')
+  return (t', VArr reg3 t' arrSizeVal) 
 compileExpr (ELength line lvalue) = do
   case lvalue of 
     ELValue l lval -> do
