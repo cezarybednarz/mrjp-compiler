@@ -297,6 +297,33 @@ optimizeStmt label llvmstmt = do
         return $ Just (Xor r1 t1 v1' v2')
       else
         return Nothing
+    -- arrays 
+    (CallArr r1 t1 s1 ts) -> do
+      ts' <- translateArgs ts 
+      return $ Just (CallArr r1 t1 s1 ts')
+    (AllocaArr r1 t1) -> do
+      return $ Just (AllocaArr r1 t1)
+    (RetArr t1 v1) -> do
+      v1' <- getVal v1 
+      return $ Just (RetArr t1 v1')
+    (StoreArr t1 v1 t2 r1) -> do
+      v1' <- getVal v1 
+      return $ Just (StoreArr t1 v1' t2 r1)
+    (LoadArr r1 t1 t2 r2) -> do
+      return $ Just (LoadArr r1 t1 t2 r2)
+    (GetElementPtrArr r1 t1 t2 r2 t3 v1) -> do
+      v1' <- getVal v1
+      return $ Just (GetElementPtrArr r1 t1 t2 r2 t3 v1')
+    (GetElementPtrRetArr r1 t1 t2 r2 t3 v1 t4 v2) -> do
+      v1' <- getVal v1
+      v2' <- getVal v2
+      return $ Just (GetElementPtrRetArr r1 t1 t2 r2 t3 v1' t4 v2')
+    (Sext r1 t1 v1 t2) -> do
+      v1' <- getVal v1 
+      return $ Just (Sext r1 t1 v1' t2)
+    (Bitcast r1 t1 v1 t2) -> do
+      v1' <- getVal v1 
+      return $ Just (Bitcast r1 t1 v1' t2)
 
 -- build dominator tree from blocks --
 buildDominatorTree :: OM ()

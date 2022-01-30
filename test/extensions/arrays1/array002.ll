@@ -56,7 +56,7 @@ L3:                              ; preds = [L0]
 L9:                              ; preds = [L3,L13]
   %r32 = phi i32 [ %r32, %L13 ], [ %r6, %L3 ]
   %r31 = phi i32 [ %r31, %L13 ], [ %r1, %L3 ]
-  %r30 = phi i32 [ %r23, %L13 ], [ 0, %L3 ]
+  %r30 = phi i32 [ %r15, %L13 ], [ 0, %L3 ]
   %r11 = sub i32 %r31, 1
   %r12 = icmp slt i32 %r30, %r11
   br i1 %r12, label %L13, label %L24
@@ -68,11 +68,9 @@ L13:                              ; preds = [L9]
    %r21 = sext i32 %r30 to i64
    %r20 = getelementptr inbounds i32, i32* %r0, i64 %r21
    store i32 %r18, i32* %r20
-  %r23 = add i32 %r30, 1
   br label %L9
 L24:                              ; preds = [L9]
-  %r26 = sub i32 %r31, 1
-   %r28 = sext i32 %r26 to i64
+   %r28 = sext i32 %r11 to i64
    %r27 = getelementptr inbounds i32, i32* %r0, i64 %r28
    store i32 %r32, i32* %r27
   ret void
