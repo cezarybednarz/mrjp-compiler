@@ -1,14 +1,14 @@
 
-void printLength(int[] x) {
-	for (int a : x) {
-		printInt(a);
-	}
+
+int[] same(int[] x) {
+	return x;
 }
+
 
 int main() {
 	int[] t = new int[2];
 	t[0] = 1;
 	t[1] = 69;
-	printLength(t);
+	//int[] t2 = same(t);
 	return 0;
 }

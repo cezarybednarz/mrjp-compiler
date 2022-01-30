@@ -1,3 +1,9 @@
+%ArrRetVal = type {
+  i32,           ; length of array
+  i32*,
+  i1*,
+  i8**
+}
 declare void @printInt(i32)
 declare void @printString(i8*)
 declare i32 @readInt()
@@ -8,7 +14,7 @@ declare i8* @__concatStrings__(i8*, i8*)
 declare i8* @malloc(i32) nounwind
 @.str.0 = private unnamed_addr constant [1 x i8] c"\00", align 1
 
-define i32* @doubleArray(i32* %r0, i32 %r1) {
+define %ArrRetVal* @doubleArray(i32* %r0, i32 %r1) {
   br label %L3
 L3:                              ; preds = [L0]
   %r4 = mul i32 4, %r1
@@ -44,7 +50,12 @@ L12:                              ; preds = [L9]
   store i32 %r26, i32* %r8
   br label %L9
 L27:                              ; preds = [L9]
-  ret i32* %r6
+  %r28 = alloca %ArrRetVal
+  %r29 = getelementptr inbounds %ArrRetVal, %ArrRetVal* %r28, i32 0, i32 0
+  store i32 %r1, i32* %r29
+  %r30 = getelementptr inbounds %ArrRetVal, %ArrRetVal* %r28, i32 0, i32 1
+  store i32* %r6, i32** %r30
+  ret %ArrRetVal* %r28
 }
 
 define void @shiftLeft(i32* %r0, i32 %r1) {
@@ -125,15 +136,4 @@ L1:                              ; preds = [L0]
   %r2 = mul i32 4, 5
   %r3 = call i8* @malloc(i32 %r2)
   %r4 = bitcast i8* %r3 to i32*
-  %r5 = alloca i32
-  store i32 0, i32* %r5
-  br label %L6
-L6:                              ; preds = [L1,L9]
-  %r7 = load i32, i32* %r5
-  %r8 = icmp slt i32 %r7, 5
-  br i1 %r8, label %L9, label %L16
-L9:                              ; preds = [L6]
-  %r10 = load i32, i32* %r5
-  %r11 = load i32, i32* %r5
-  %r13 = sext i32 %r11 to i64
-  %
+  %r5 = a

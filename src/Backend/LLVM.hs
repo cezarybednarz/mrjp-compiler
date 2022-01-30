@@ -23,6 +23,7 @@ data Type = Ti64
           | Ti1
           | Ti8
           | Ptr Type
+          | TArr
   deriving (Eq, Ord)
 
 
@@ -44,6 +45,7 @@ data LLVMStmt = Call Reg Type String [(Type, Val)]
               | StoreArr Type Val Type Reg
               | LoadArr Reg Type Type Reg
               | GetElementPtrArr Reg Type Type Reg Type Val
+              | GetElementPtrRetArr Reg Type Type Reg Type Val Type Val
               -- %12 = getelementptr inbounds i32, i32* %11, i64 3
               | Sext Reg Type Val Type
               | Bitcast Reg Type Val Type
@@ -89,6 +91,13 @@ data LLVMProgram = LLVMProgram {
   deriving (Show, Eq, Ord)
 
 -- helper for arrays -- 
+
+getArrayStructId :: Type -> Integer
+getArrayStructId t = 
+  case t of 
+    (Ptr Ti32) -> 1
+    (Ptr Ti1) -> 2
+    (Ptr (Ptr Ti8)) -> 3
 
 isArrayType :: Type -> Bool
 isArrayType t = 
@@ -147,6 +156,7 @@ instance Show Type where
   show Ti1     = "i1"
   show Ti8     = "i8"
   show (Ptr t) = show t ++ "*"
+  show TArr    = "%ArrRetVal"
 
 instance Show LLVMStmt where
   show (Call reg t name args) = show reg ++ " = call " ++ show t ++ " @"
@@ -175,10 +185,14 @@ instance Show LLVMStmt where
   show (StoreArr t1 v1 t2 r1) = show (Store t1 v1 t2 r1)
   show (LoadArr r1 t1 t2 r2) = show (Load r1 t1 t2 r2)
   -- GetElementPtrArr Reg Type Type Reg Type Val
-  -- %12 = getelementptr inbounds i32, i32* %11, i64 3
+  -- %12 = getelementptr inbounds i32, i32* %11, i64 3, i64 0
   show (GetElementPtrArr r1 t1 t2 r2 t3 v1) = show r1 
     ++ " = getelementptr inbounds " ++ show t1 ++ ", " ++ show t2 
-    ++ " " ++ show r2 ++ ", " ++ show t3 ++ " " ++ show v1
+    ++ " " ++ show r2 ++ ", " ++ show t3 ++ " " ++ show v1 
+  show (GetElementPtrRetArr r1 t1 t2 r2 t3 v1 t4 v2) = show r1 
+    ++ " = getelementptr inbounds " ++ show t1 ++ ", " ++ show t2 
+    ++ " " ++ show r2 ++ ", " ++ show t3 ++ " " ++ show v1 
+    ++ ", " ++ show t4 ++ " " ++ show v2
   show (Sext r1 t1 v1 t2) = show r1 ++ " = sext " ++ show t1 ++ " " 
     ++ show v1 ++ " to " ++ show t2
   show (Bitcast r1 t1 v1 t2) = show r1 ++ " = bitcast " ++ show t1 ++ " " ++ show v1 
@@ -286,12 +300,17 @@ printArgs first register ((t, _):args) =
       ++
       printArgs False (register + 2) args
 
+printFType :: Type -> String
+printFType t = 
+  if isArrayType t then
+    "%ArrRetVal*"
+  else show t
 
 printFunctions :: [Fn] -> [String]
 printFunctions [] = []
 printFunctions (fn:fns) =
   [
-    "\ndefine " ++ show (fType fn) ++ " @" ++ fName fn
+    "\ndefine " ++ printFType (fType fn) ++ " @" ++ fName fn
     ++ "(" ++ printArgs True 0 (fArgs fn) ++ ") {"
   ]
   ++
@@ -304,6 +323,12 @@ printFunctions (fn:fns) =
 printLLVMProgram :: [StrConstant] -> [Fn] -> [String]
 printLLVMProgram strConstants fns =
   [
+    "%ArrRetVal = type {",
+    "  i32,           ; length of array",
+    "  i32*,",
+    "  i1*,",
+    "  i8**",
+    "}",
     "declare void @printInt(i32)",
     "declare void @printString(i8*)",
     "declare i32 @readInt()",

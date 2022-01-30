@@ -473,12 +473,12 @@ compileExpr (ELValue _ lvalue) = do
       (tVal, eVal) <- compileExpr expr2
       vId <- compileConvToTi64 eVal
       reg4 <- newRegister
-      emitStmt $ GetElementPtrArr reg4 tArr (Ptr tArr) reg Ti64 vId
+      emitStmt $ GetElementPtrArr reg4 tArr (Ptr tArr) reg Ti64 vId 
       reg5 <- newRegister
       emitStmt $ LoadArr reg5 tArr (Ptr tArr) reg4
       return (tArr, VReg reg5)
     _ -> do
-      if (isArrayType t) then do 
+      if isArrayType t then do 
         return (t, VReg reg)
       else do
         reg2 <- emitLoad t reg
@@ -493,6 +493,7 @@ compileExpr (EApp _ id exprs) = do
   types <- getFnArgsTypes ident
   vals <- compileExprList exprs
   let llArgs = zip types vals
+  -- todo isarraytype
   case t of
     Tvoid -> do
       emitStmt $ CallVoid t ident llArgs
@@ -645,7 +646,7 @@ compileStmt (Ass _ lvalue expr) = do
         (Ptr t, r) <- getIdentTypeReg id
         reg <- newRegister
         newIdxVal <- compileConvToTi64 idxVal
-        emitStmt $ GetElementPtrArr reg t (Ptr t) r Ti64 newIdxVal
+        emitStmt $ GetElementPtrArr reg t (Ptr t) r Ti64 newIdxVal 
         emitStmt $ Store t e (Ptr t) reg
       _ -> do 
         (t, r) <- getIdentTypeReg id
@@ -669,7 +670,23 @@ compileStmt (Latte.Ret _ expr) = do
   (_, val) <- compileExpr expr
   env <- ask
   t <- getCurrFnType
-  return (Return (t, val), env)
+  if isArrayType t then do 
+    reg <- newRegister 
+    emitStmt $ AllocaArr reg TArr
+    let (Ptr t') = t
+    let structId = getArrayStructId t 
+    case expr of 
+      (ELValue _ (LVar _ id)) -> do
+        (ArrLength len) <- getIdentArrLength id
+        reg2 <- newRegister 
+        emitStmt $ GetElementPtrRetArr reg2 TArr (Ptr TArr) reg Ti32 (VConst 0) Ti32 (VConst 0)
+        emitStmt $ StoreArr t' len t reg2
+        reg3 <- newRegister
+        emitStmt $ GetElementPtrRetArr reg3 TArr (Ptr TArr) reg Ti32 (VConst 0) Ti32 (VConst structId)
+        emitStmt $ StoreArr t val (Ptr t) reg3
+        return (Return (Ptr TArr, VReg reg), env)
+  else
+    return (Return (t, val), env)
 compileStmt (VRet _) = do
   env <- ask
   return (Return (Tvoid, VConst 0), env)

@@ -1,3 +1,9 @@
+%ArrRetVal = type {
+  i32,           ; length of array
+  i32*,
+  i1*,
+  i8**
+}
 declare void @printInt(i32)
 declare void @printString(i8*)
 declare i32 @readInt()
