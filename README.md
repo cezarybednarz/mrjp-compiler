@@ -22,10 +22,10 @@ All used modules are defined in `package.yaml` in the main directory.
  - GCSE: global common subexpression elimination
 
 ## Extensions 
- - arrays with foreach loop
+ - arrays with foreach loop and `.length`
 
 ## File structure
- - `lib/runtime.bc`: 
+ - `lib/runtime.bc`: runtime library with functions like printing and string concatenation
  - `src/`
    - `Main.hs`: gets input file, performs semantic analysis and compiles it
    - `Frontend/`: module which executes semantic analysis

@@ -293,7 +293,6 @@ emitDeclItem t (NoInit line id) = do
       emitStmt $ Store Ti1 (VConst 0) (Ptr Ti1) reg
     Str _ -> do
       emitStmt $ Store (Ptr Ti8) (VGetElementPtr 0 1 "") (Ptr (Ptr Ti8)) reg
-    -- todo moze string?
   newValEnv <- declareVarInEnv llvmtype id reg Nothing
   return $ env { eValEnv = newValEnv }
 emitDeclItem t (Init line id e) = do
