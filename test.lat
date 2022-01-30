@@ -1,7 +1,7 @@
 
 
-int[] same(int[] x) {
-	x[1] = x[1] + 1;
+int[] same(int[] x, int a) {
+	x[1] = x[1] + a;
 	return x;
 }
 
@@ -10,8 +10,7 @@ int main() {
 	int[] t = new int[2];
 	t[0] = 420;
 	t[1] = 69;
-	int[] t2 = same(t);
+	int[] t2 = same(t, 1);
 	printInt(t2[1]);
 	return 0;
-
 }

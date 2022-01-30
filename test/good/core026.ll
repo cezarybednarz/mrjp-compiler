@@ -23,10 +23,7 @@ L1:                              ; preds = [L0]
 define i32 @s(i32 %r0) {
   br label %L2
 L2:                              ; preds = [L0]
-  %r3 = alloca i32
-  store i32 %r0, i32* %r3
-  %r4 = load i32, i32* %r3
-  %r5 = add i32 %r4, 1
+  %r5 = add i32 %r0, 1
   ret i32 %r5
 }
 

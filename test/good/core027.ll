@@ -26,11 +26,7 @@ L1:                              ; preds = [L0]
 define void @f(i8* %r0) {
   br label %L2
 L2:                              ; preds = [L0]
-  %r3 = alloca i8*
-  store i8* %r0, i8** %r3
-  store i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.2, i32 0, i32 0), i8** %r3
-  %r4 = load i8*, i8** %r3
-  call void @printString(i8* %r4)
+  call void @printString(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.2, i32 0, i32 0))
   ret void
 }
 

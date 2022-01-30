@@ -26,13 +26,7 @@ L1:                              ; preds = [L0]
 define void @f(i32 %r0, i32 %r1) {
   br label %L3
 L3:                              ; preds = [L0]
-  %r4 = alloca i32
-  store i32 %r0, i32* %r4
-  %r5 = alloca i32
-  store i32 %r1, i32* %r5
-  %r6 = load i32, i32* %r5
-  %r7 = load i32, i32* %r4
-  %r8 = icmp sgt i32 %r6, %r7
+  %r8 = icmp sgt i32 %r1, %r0
   br i1 %r8, label %L11, label %L9
 L9:                              ; preds = [L3]
   %r10 = call i1 @e()

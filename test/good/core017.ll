@@ -20,10 +20,7 @@ declare i8* @malloc(i32) nounwind
 define i32 @main() {
   br label %L1
 L1:                              ; preds = [L0]
-  %r2 = alloca i32
-  store i32 4, i32* %r2
-  %r3 = load i32, i32* %r2
-  %r4 = icmp sle i32 3, %r3
+  %r4 = icmp sle i32 3, 4
   %r5 = xor i1 %r4, true
   br i1 %r5, label %L15, label %L6
 L6:                              ; preds = [L1]
@@ -69,8 +66,7 @@ L32:                              ; preds = [L24]
   %r33 = phi i1 [ %r31, %L29 ], [ true, %L24 ]
   %r34 = xor i1 %r33, true
   call void @printBool(i1 %r34)
-  %r35 = load i32, i32* %r2
-  %r36 = icmp eq i32 4, %r35
+  %r36 = icmp eq i32 4, 4
   %r37 = xor i1 %r36, true
   br i1 %r37, label %L48, label %L38
 L38:                              ; preds = [L32]
@@ -104,20 +100,14 @@ L48:                              ; preds = [L32]
 define i1 @dontCallMe(i32 %r0) {
   br label %L2
 L2:                              ; preds = [L0]
-  %r3 = alloca i32
-  store i32 %r0, i32* %r3
-  %r4 = load i32, i32* %r3
-  call void @printInt(i32 %r4)
+  call void @printInt(i32 %r0)
   ret i1 true
 }
 
 define void @printBool(i1 %r0) {
   br label %L2
 L2:                              ; preds = [L0]
-  %r3 = alloca i1
-  store i1 %r0, i1* %r3
-  %r4 = load i1, i1* %r3
-  br i1 %r4, label %L5, label %L6
+  br i1 %r0, label %L5, label %L6
 L5:                              ; preds = [L2]
   call void @printString(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.2, i32 0, i32 0))
   br label %L7
@@ -131,17 +121,10 @@ L7:                              ; preds = [L6,L5]
 define i1 @implies(i1 %r0, i1 %r1) {
   br label %L3
 L3:                              ; preds = [L0]
-  %r4 = alloca i1
-  store i1 %r0, i1* %r4
-  %r5 = alloca i1
-  store i1 %r1, i1* %r5
-  %r6 = load i1, i1* %r4
-  %r7 = xor i1 %r6, true
+  %r7 = xor i1 %r0, true
   br i1 %r7, label %L12, label %L8
 L8:                              ; preds = [L3]
-  %r9 = load i1, i1* %r4
-  %r10 = load i1, i1* %r5
-  %r11 = icmp eq i1 %r9, %r10
+  %r11 = icmp eq i1 %r0, %r1
   br label %L12
 L12:                              ; preds = [L3]
   %r13 = phi i1 [ %r11, %L8 ], [ true, %L3 ]

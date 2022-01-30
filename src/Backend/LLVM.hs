@@ -40,13 +40,14 @@ data LLVMStmt = Call Reg Type String [(Type, Val)]
               | Cmp Reg Cond Type Val Val
               | Xor Reg Type Val Val
               | Phi Reg Type [(Val, Label)]
-              -- arrays
+              -- arrays --
+              | CallArr Reg Type String [(Type, Val)]
+              | RetArr Type Val
               | AllocaArr Reg Type 
               | StoreArr Type Val Type Reg
               | LoadArr Reg Type Type Reg
               | GetElementPtrArr Reg Type Type Reg Type Val
               | GetElementPtrRetArr Reg Type Type Reg Type Val Type Val
-              -- %12 = getelementptr inbounds i32, i32* %11, i64 3
               | Sext Reg Type Val Type
               | Bitcast Reg Type Val Type
   deriving (Eq, Ord)
@@ -181,21 +182,22 @@ instance Show LLVMStmt where
     ++ " " ++ show t ++ " " ++ show v1 ++ ", " ++ show v2
   show (Phi reg t phiArgs) = show reg ++ " = phi " ++ show t
     ++ " " ++ printPhiArgs True phiArgs
-  show (AllocaArr r1 t1) = show (Alloca r1 t1)
-  show (StoreArr t1 v1 t2 r1) = show (Store t1 v1 t2 r1)
-  show (LoadArr r1 t1 t2 r2) = show (Load r1 t1 t2 r2)
-  -- GetElementPtrArr Reg Type Type Reg Type Val
-  -- %12 = getelementptr inbounds i32, i32* %11, i64 3, i64 0
-  show (GetElementPtrArr r1 t1 t2 r2 t3 v1) = show r1 
+  -- arrays --
+  show (CallArr reg t name args) = " " ++ show (Call reg t name args)
+  show (RetArr t val) = " " ++ show (Ret t val)
+  show (AllocaArr r1 t1) = " " ++ show (Alloca r1 t1)
+  show (StoreArr t1 v1 t2 r1) = " " ++ show (Store t1 v1 t2 r1)
+  show (LoadArr r1 t1 t2 r2) = " " ++  show (Load r1 t1 t2 r2)
+  show (GetElementPtrArr r1 t1 t2 r2 t3 v1) = " " ++ show r1 
     ++ " = getelementptr inbounds " ++ show t1 ++ ", " ++ show t2 
     ++ " " ++ show r2 ++ ", " ++ show t3 ++ " " ++ show v1 
-  show (GetElementPtrRetArr r1 t1 t2 r2 t3 v1 t4 v2) = show r1 
+  show (GetElementPtrRetArr r1 t1 t2 r2 t3 v1 t4 v2) = " " ++ show r1 
     ++ " = getelementptr inbounds " ++ show t1 ++ ", " ++ show t2 
     ++ " " ++ show r2 ++ ", " ++ show t3 ++ " " ++ show v1 
     ++ ", " ++ show t4 ++ " " ++ show v2
-  show (Sext r1 t1 v1 t2) = show r1 ++ " = sext " ++ show t1 ++ " " 
+  show (Sext r1 t1 v1 t2) = " " ++ show r1 ++ " = sext " ++ show t1 ++ " " 
     ++ show v1 ++ " to " ++ show t2
-  show (Bitcast r1 t1 v1 t2) = show r1 ++ " = bitcast " ++ show t1 ++ " " ++ show v1 
+  show (Bitcast r1 t1 v1 t2) = " " ++ show r1 ++ " = bitcast " ++ show t1 ++ " " ++ show v1 
     ++ " to " ++ show t2
 
 -- print llvm code from in-memory structures --

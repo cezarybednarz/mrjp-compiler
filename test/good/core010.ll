@@ -25,31 +25,17 @@ L1:                              ; preds = [L0]
 define i32 @fac(i32 %r0) {
   br label %L2
 L2:                              ; preds = [L0]
-  %r3 = alloca i32
-  store i32 %r0, i32* %r3
-  %r4 = alloca i32
-  store i32 0, i32* %r4
-  %r5 = alloca i32
-  store i32 0, i32* %r5
-  store i32 1, i32* %r4
-  %r6 = load i32, i32* %r3
-  store i32 %r6, i32* %r5
   br label %L7
 L7:                              ; preds = [L2,L10]
-  %r8 = load i32, i32* %r5
-  %r9 = icmp sgt i32 %r8, 0
+  %r20 = phi i32 [ %r13, %L10 ], [ 1, %L2 ]
+  %r19 = phi i32 [ %r15, %L10 ], [ %r0, %L2 ]
+  %r9 = icmp sgt i32 %r19, 0
   br i1 %r9, label %L10, label %L16
 L10:                              ; preds = [L7]
-  %r11 = load i32, i32* %r4
-  %r12 = load i32, i32* %r5
-  %r13 = mul i32 %r11, %r12
-  store i32 %r13, i32* %r4
-  %r14 = load i32, i32* %r5
-  %r15 = sub i32 %r14, 1
-  store i32 %r15, i32* %r5
+  %r13 = mul i32 %r20, %r19
+  %r15 = sub i32 %r19, 1
   br label %L7
 L16:                              ; preds = [L7]
-  %r17 = load i32, i32* %r4
-  ret i32 %r17
+  ret i32 %r20
 }
 

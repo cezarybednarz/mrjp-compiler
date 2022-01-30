@@ -125,8 +125,13 @@ putArgsInFirstBlock :: Reg -> [(LLVM.Type, String)] -> OM ()
 putArgsInFirstBlock _ [] = return ()
 putArgsInFirstBlock (Reg r) ((t, _):args) = do
   fn <- getCurrentFn
-  writeVariable (Reg r) (Label 0) (TypeVal t (VReg (Reg r)))
-  putArgsInFirstBlock (Reg (r + 1)) args
+  if isArrayType t then do
+    writeVariable (Reg r) (Label 0) (TypeVal t (VReg (Reg r)))
+    writeVariable (Reg (r + 1)) (Label 0) (TypeVal Ti32 (VReg (Reg (r + 1))))
+    putArgsInFirstBlock (Reg (r + 2)) args
+  else do
+    writeVariable (Reg r) (Label 0) (TypeVal t (VReg (Reg r)))
+    putArgsInFirstBlock (Reg (r + 1)) args
 
 -- optimizer monad --
 type OM a = (StateT OptimizerState IO) a
@@ -212,7 +217,9 @@ findTrivialPhis ((reg, (t, [(v1, l1), (v2, l2)])):phis) = do
     return $ Just (reg, v1)
   else
     findTrivialPhis phis
-
+findTrivialPhis [(reg, (t, [(v1, l1)]))] = do
+  return $ Just (reg, v1)
+  
 translateValuesForBlocks :: (Reg, Val) -> [Label] -> OM ()
 translateValuesForBlocks _ [] = return ()
 translateValuesForBlocks regVal (label:labels) = do
@@ -265,6 +272,33 @@ translateStmt regVal llvmstmt = do
       v1' <- transVal v1 regVal
       v2' <- transVal v2 regVal
       return (Xor r1 t1 v1' v2')
+    -- arrays
+    (CallArr r1 t1 s1 ts) -> do
+      newTs <- translateArgs ts regVal
+      return (CallArr r1 t1 s1 newTs)
+    (AllocaArr r1 t1) -> do
+      return $ AllocaArr r1 t1
+    (RetArr t1 v1) -> do
+      v1' <- transVal v1 regVal
+      return $ RetArr t1 v1
+    (StoreArr t1 v1 t2 r1) -> do
+      v1' <- transVal v1 regVal
+      return $ StoreArr t1 v1' t2 r1
+    (LoadArr r1 t1 t2 r2) -> do
+      return $ LoadArr r1 t1 t2 r2
+    (GetElementPtrArr r1 t1 t2 r2 t3 v1) -> do
+      v1' <- transVal v1 regVal
+      return $ GetElementPtrArr r1 t1 t2 r2 t3 v1'
+    (GetElementPtrRetArr r1 t1 t2 r2 t3 v1 t4 v2) -> do
+      v1' <- transVal v1 regVal
+      v2' <- transVal v2 regVal
+      return $ GetElementPtrRetArr r1 t1 t2 r2 t3 v1' t4 v2'
+    (Sext r1 t1 v1 t2) -> do
+      v1' <- transVal v1 regVal
+      return $ Sext r1 t1 v1' t2
+    (Bitcast r1 t1 v1 t2) -> do
+      v1' <- transVal v1 regVal
+      return $ Bitcast r1 t1 v1' t2
 
 translatePhisForBlock :: (Reg, Val) -> Label -> OM ()
 translatePhisForBlock regVal label = do
@@ -333,6 +367,29 @@ optimizeStmt label llvmstmt = do
       writeVariable r1 label (TypeVal t1 (VReg r1))
       return $ Just (Xor r1 t1 v1' v2')
     Phi {} -> return Nothing -- phis are stored in map inside block
+    -- arrays
+    (CallArr r1 t1 s1 ts) -> do
+      ts' <- optimizeArgsList label ts
+      return $ Just (CallArr r1 t1 s1 ts')
+    (RetArr t1 v1) -> do
+      return $ Just (RetArr t1 v1)
+    (AllocaArr r1 t1) -> do
+      return $ Just (AllocaArr r1 t1)
+    (StoreArr t1 v1 t2 r1) -> do
+      v1' <- readVal (TypeVal t1 v1) label 
+      return $ Just (StoreArr t1 v1' t2 r1)
+    (LoadArr r1 t1 t2 r2) -> do
+      writeVariable r1 label (TypeVal t1 (VReg r1)) 
+      return $ Just (LoadArr r1 t1 t2 r2)
+    (GetElementPtrArr r1 t1 t2 r2 t3 v1) -> do
+      return $ Just (GetElementPtrArr r1 t1 t2 r2 t3 v1)
+    (GetElementPtrRetArr r1 t1 t2 r2 t3 v1 t4 v2) -> do
+      return $ Just (GetElementPtrRetArr r1 t1 t2 r2 t3 v1 t4 v2)
+    (Sext r1 t1 v1 t2) -> do
+      v1' <- readVal (TypeVal t1 v1) label
+      return $ Just (Sext r1 t1 v1' t2)
+    (Bitcast r1 t1 v1 t2) -> do
+      return $ Just (Bitcast r1 t1 v1 t2)
 
 optimizeArgsList :: Label -> [(LLVM.Type, Val)] -> OM [(LLVM.Type, Val)]
 optimizeArgsList label [] = return []
@@ -427,8 +484,11 @@ readVal :: TypeVal -> Label -> OM Val
 readVal (TypeVal t val) label = do
   case val of
     (VReg reg) -> do
-      (TypeVal _ optimizedVal) <- readVariable t reg label
-      return optimizedVal
+      if isArrayType t then do
+        return (VReg reg)
+      else do
+        (TypeVal _ optimizedVal) <- readVariable t reg label
+        return optimizedVal
     val' -> return val'
 
 -- read register from block (from modern SSA algorithm) --

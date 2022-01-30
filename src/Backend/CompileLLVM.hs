@@ -187,7 +187,9 @@ emitArgsDecl reg ((t, strId):args) = do
     emitArrArgDecl arrType = do
       env <- ask
       let (Reg r) = reg
-      let lenReg = Reg (r + 1)
+      lenReg <- newRegister
+      emitStmt $ Alloca lenReg Ti32
+      emitStmt $ Store Ti32 (VReg (Reg (r + 1))) (Ptr Ti32) lenReg
       let arrLength = Just (ArrLength (VReg lenReg))
       newValEnv <- declareVarInEnv arrType (Ident strId) reg arrLength
       local (const (env {eValEnv = newValEnv})) 
@@ -247,10 +249,6 @@ emitFunction label t name args = do
   label2 <- getLabel
   emitFirstLabel label
   emitArgsDecl (Reg 0) args
-    
-
-        
-
 
 -- add empty block to current function --
 emitNewBlock :: Label -> CM ()
@@ -485,7 +483,7 @@ compileExpr (EApp _ id exprs) = do
     let (Ptr t') = t
     let structId = getArrayStructId t
     reg <- newRegister 
-    emitStmt $ Call reg (Ptr TArr) ident llArgs
+    emitStmt $ CallArr reg (Ptr TArr) ident llArgs
     reg2 <- newRegister
     emitStmt $ GetElementPtrRetArr reg2 TArr (Ptr TArr) reg Ti32 (VConst 0) Ti32 (VConst 0)
     reg3 <- newRegister -- length
@@ -557,7 +555,6 @@ compileExpr (EOr _ expr1 expr2) = do
   putInBlockForBlock lTrue lStart
   putInBlockForBlock lFalse lStart
   reg <- newRegister
-  --emitStmt $ Phi reg Ti1 [(VTrue, lStart), (e2, lFalse2)]
   lCurr <- getLabel
   putPhiForBlock lCurr reg Ti1 (VTrue, lStart)
   putPhiForBlock lCurr reg Ti1 (e2, lFalse2)
@@ -591,7 +588,7 @@ compileExpr (ENewArr _ t expr) = do
         Ptr _ -> 8 
   emitStmt $ Arithm reg Ti32 (VConst sizeOf) arrSizeVal Mul
   reg2 <- newRegister
-  emitStmt $ Call reg2 (Ptr Ti8) "malloc" [(Ti32, VReg reg)]
+  emitStmt $ CallArr reg2 (Ptr Ti8) "malloc" [(Ti32, VReg reg)]
   reg3 <- newRegister
   emitStmt $ Bitcast reg3 (Ptr Ti8) (VReg reg2) (Ptr t')
   return (t', VArr reg3 t' arrSizeVal) 
@@ -626,7 +623,11 @@ compileBlockStmts (s:ss) = do
           emitStmt LLVM.RetVoid
         _ -> do
           newRegister
-          emitStmt $ LLVM.Ret t val
+          case t of
+            (Ptr TArr) -> do
+              emitStmt $ LLVM.RetArr t val
+            _ -> do
+              emitStmt $ LLVM.Ret t val
       return ret
     (ReturnNothing, env) -> do
       local (const env) $ compileBlockStmts ss
@@ -660,7 +661,7 @@ compileStmt (Ass _ lvalue expr) = do
         reg <- newRegister
         newIdxVal <- compileConvToTi64 idxVal
         emitStmt $ GetElementPtrArr reg t (Ptr t) r Ti64 newIdxVal 
-        emitStmt $ Store t e (Ptr t) reg
+        emitStmt $ StoreArr t e (Ptr t) reg
       _ -> do 
         (t, r) <- getIdentTypeReg id
         emitStmt $ Store t e (Ptr t) r

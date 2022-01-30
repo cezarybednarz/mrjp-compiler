@@ -26,17 +26,11 @@ L1:                              ; preds = [L0]
 define i32 @f(i32 %r0, i32 %r1) {
   br label %L3
 L3:                              ; preds = [L0]
-  %r4 = alloca i32
-  store i32 %r0, i32* %r4
-  %r5 = alloca i32
-  store i32 %r1, i32* %r5
-  %r6 = load i32, i32* %r4
-  %r7 = icmp sgt i32 %r6, 0
+  %r7 = icmp sgt i32 %r0, 0
   %r8 = xor i1 %r7, true
   br i1 %r8, label %L13, label %L9
 L9:                              ; preds = [L3]
-  %r10 = load i32, i32* %r5
-  %r11 = icmp sgt i32 %r10, 0
+  %r11 = icmp sgt i32 %r1, 0
   %r12 = xor i1 %r11, true
   br label %L13
 L13:                              ; preds = [L3]
@@ -44,13 +38,11 @@ L13:                              ; preds = [L3]
   %r15 = xor i1 %r14, true
   br i1 %r15, label %L27, label %L16
 L16:                              ; preds = [L13]
-  %r17 = load i32, i32* %r4
-  %r18 = icmp slt i32 %r17, 0
+  %r18 = icmp slt i32 %r0, 0
   %r19 = xor i1 %r18, true
   br i1 %r19, label %L24, label %L20
 L20:                              ; preds = [L16]
-  %r21 = load i32, i32* %r5
-  %r22 = icmp slt i32 %r21, 0
+  %r22 = icmp slt i32 %r1, 0
   %r23 = xor i1 %r22, true
   br label %L24
 L24:                              ; preds = [L16]

@@ -18,10 +18,7 @@ define i32 @main() {
   br label %L1
 L1:                              ; preds = [L0]
   %r2 = call i32 @foo()
-  %r3 = alloca i32
-  store i32 %r2, i32* %r3
-  %r4 = load i32, i32* %r3
-  call void @printInt(i32 %r4)
+  call void @printInt(i32 %r2)
   ret i32 0
 }
 

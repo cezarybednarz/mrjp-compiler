@@ -17,17 +17,9 @@ declare i8* @malloc(i32) nounwind
 define i32 @main() {
   br label %L1
 L1:                              ; preds = [L0]
-  %r2 = alloca i32
-  store i32 0, i32* %r2
-  %r3 = alloca i32
-  store i32 0, i32* %r3
-  store i32 45, i32* %r2
   %r4 = sub i32 0, 36
-  store i32 %r4, i32* %r3
-  %r5 = load i32, i32* %r2
-  call void @printInt(i32 %r5)
-  %r6 = load i32, i32* %r3
-  call void @printInt(i32 %r6)
+  call void @printInt(i32 45)
+  call void @printInt(i32 %r4)
   ret i32 0
 }
 
