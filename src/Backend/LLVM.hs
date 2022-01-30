@@ -8,7 +8,7 @@ data Val = VConst Integer
          | VFalse
          | VNone
          -- array
-         | VArr Type Val
+         | VArr Reg Type Val -- array register, type, length
   deriving (Eq, Ord)
 
 newtype Reg = Reg Integer

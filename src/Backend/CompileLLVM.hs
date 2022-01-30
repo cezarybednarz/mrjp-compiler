@@ -304,7 +304,7 @@ emitDeclItem t (Init line id e) = do
   (_, exprVal) <- compileExpr e
   case t of
     (Array _ tArr) -> do
-      let (VArr arrType arrSizeVal) = exprVal
+      let (VArr _ arrType arrSizeVal) = exprVal
       reg <- newRegister
       let sizeOf = case arrType of
             Ti32 -> 4
@@ -493,15 +493,29 @@ compileExpr (EApp _ id exprs) = do
   types <- getFnArgsTypes ident
   vals <- compileExprList exprs
   let llArgs = zip types vals
-  -- todo isarraytype
-  case t of
-    Tvoid -> do
-      emitStmt $ CallVoid t ident llArgs
-      return (Ti32, VConst 0)
-    _ -> do
-      reg <- newRegister
-      emitStmt $ Call reg t ident llArgs
-      return (t, VReg reg)
+  if isArrayType t then do
+    let (Ptr t') = t
+    let structId = getArrayStructId t
+    reg <- newRegister 
+    emitStmt $ Call reg (Ptr TArr) ident llArgs
+    reg2 <- newRegister
+    emitStmt $ GetElementPtrRetArr reg2 TArr (Ptr TArr) reg Ti32 (VConst 0) Ti32 (VConst 0)
+    reg3 <- newRegister -- length
+    emitStmt $ LoadArr reg3 Ti32 (Ptr Ti32) reg2 
+    reg4 <- newRegister 
+    emitStmt $ GetElementPtrRetArr reg4 TArr (Ptr TArr) reg Ti32 (VConst 0) Ti32 (VConst structId) 
+    reg5 <- newRegister
+    emitStmt $ LoadArr reg5 t (Ptr t) reg4
+    return (t, VArr reg5 t (VReg reg3))
+  else do 
+    case t of
+      Tvoid -> do
+        emitStmt $ CallVoid t ident llArgs
+        return (Ti32, VConst 0)
+      _ -> do
+        reg <- newRegister
+        emitStmt $ Call reg t ident llArgs
+        return (t, VReg reg)
 compileExpr (EString _ s) = do
   (id, l) <- emitStrConst s
   return (Ptr Ti8, VGetElementPtr id l s)
@@ -581,7 +595,7 @@ compileExpr (ERel _ expr1 op expr2) = do
 compileExpr (ENewArr _ t expr) = do
   t' <- convTypeLLVMType t
   (_, e) <- compileExpr expr
-  return (t', VArr t' e)
+  return (t', VArr (Reg 0) t' e) -- todo -1
 compileExpr (ELength line lvalue) = do
   case lvalue of 
     ELValue l lval -> do
@@ -680,7 +694,7 @@ compileStmt (Latte.Ret _ expr) = do
         (ArrLength len) <- getIdentArrLength id
         reg2 <- newRegister 
         emitStmt $ GetElementPtrRetArr reg2 TArr (Ptr TArr) reg Ti32 (VConst 0) Ti32 (VConst 0)
-        emitStmt $ StoreArr t' len t reg2
+        emitStmt $ StoreArr Ti32 len (Ptr Ti32) reg2
         reg3 <- newRegister
         emitStmt $ GetElementPtrRetArr reg3 TArr (Ptr TArr) reg Ti32 (VConst 0) Ti32 (VConst structId)
         emitStmt $ StoreArr t val (Ptr t) reg3
