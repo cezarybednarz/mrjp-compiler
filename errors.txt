@@ -1,0 +1,182 @@
+Stary błąd do poprawienia to:
+./testy/bad/void_function_argument.lat
+
+```
+int main() {
+  return 0;
+}
+
+int f(void x) {
+  return 2;
+}
+```
+
+compiler internal error: convArgExpr
+(szczegóły znajdzie Pan w moim mailu z oceną podstawowej wersji kompilatora)
+
+Na końcu maila kilka nowych przykładów, na których Pana program 
+albo produkuje zły kod, albo się wywala. W skrócie:
+1.  odwołania do nieistniejących rejestrów
+
+
+==> Plik testy/good/none/core024.lat
+* Problem z kompilacją
+  Błąd kompilacji
+OK
+
+llvm-as: testy/good/none/core024.ll:43:20: error: use of undefined value '%r2'
+  %r23 = phi i32 [ %r2, %L18 ], [ 4, %L19 ]
+                   ^
+llvm-link: testy/good/none/core024.bc: error: Could not open input file: No such file or directory
+llvm-link: error:  loading file 'testy/good/none/core024.bc'
+----
+/* usage of variable initialized in both branches. */
+
+int main () {
+  int x;
+  int y = 1+1+1;
+  if (y <= 2) {
+   if (y <= 1) {
+    if (y <= 0) {
+     x = 1;
+    }
+    else {
+     x = 2;
+    }
+   }
+   else {
+    x = 3;
+   }
+  } else {
+    x = 4;
+  }
+  printInt(x);
+  return 0 ;
+
+}
+------
+
+%ArrRetVal = type {
+  i32,           ; length of array
+  i32*,
+  i1*,
+  i8**
+}
+declare void @printInt(i32)
+declare void @printString(i8*)
+declare i32 @readInt()
+declare i8* @readString()
+declare void @error()
+declare i32 @__equStrings__(i8*, i8*)
+declare i8* @__concatStrings__(i8*, i8*)
+declare i8* @malloc(i32) nounwind
+@.str.0 = private unnamed_addr constant [1 x i8] c"\00", align 1
+
+define i32 @main() {
+  br label %L1
+L1:                              ; preds = [L0]
+  %r3 = add i32 1, 1
+  %r4 = add i32 %r3, 1
+  %r7 = icmp sle i32 %r4, 2
+  br i1 %r7, label %L8, label %L19
+L8:                              ; preds = [L1]
+  %r10 = icmp sle i32 %r4, 1
+  br i1 %r10, label %L11, label %L17
+L11:                              ; preds = [L8]
+  %r13 = icmp sle i32 %r4, 0
+  br i1 %r13, label %L14, label %L15
+L14:                              ; preds = [L11]
+  br label %L16
+L15:                              ; preds = [L11]
+  br label %L16
+L16:                              ; preds = [L15,L14]
+  br label %L18
+L17:                              ; preds = [L8]
+  br label %L18
+L18:                              ; preds = [L17,L16]
+  br label %L20
+L19:                              ; preds = [L1]
+  br label %L20
+L20:                              ; preds = [L19,L18]
+  %r23 = phi i32 [ %r2, %L18 ], [ 4, %L19 ]  ;;;;; tu jest złe odwołanie do r2!
+  call void @printInt(i32 %r23)
+  ret i32 0
+}
+
+
+2. Non-exhaustive patterns w Mem2Reg.hs (dwa różne miejsca w kodzie):
+
+2. Non-exhaustive patterns w Mem2Reg.hs
+ 
+==> Plik testy/good/Daria/mt2.lat
+* Problem z kompilacją
+  Błąd kompilacji
+OK
+
+compiler: src/Optimizations/Mem2Reg.hs:(214,1)-(221,25): Non-exhaustive patterns in function findTrivialPhis
+
+----
+int main() {
+printInt(f(1,2));
+        return 0 ;
+}
+
+int f(int a, int b) {
+    int t = 3;
+    int s,pom;
+
+    s= a+b;
+    while (t >= 0) {
+      if (t>0) {
+         if (s > 10)
+           pom = (a+b) /3;
+         else
+           pom = 3* (a+b);
+      }          
+      t--;
+    }
+    return (a+b+pom);
+
+}
+------
+
+2. drugie miejsce w kodzie
+ 
+==> Plik testy/good/Wazne/while_big_expr.lat
+* Problem z kompilacją
+  Błąd kompilacji
+OK
+
+compiler: src/Optimizations/Mem2Reg.hs:(307,23)-(310,41): Non-exhaustive patterns in lambda
+
+----
+// duże wyrażenia obliczane w pętli
+
+int funkcja_declarations (int x, int y, int z, int n) {
+  int i=0;
+  int m=0;
+  int t;
+  while (i<n) {
+    t=((x+1111)*(z+2222)-(x-3333)*(y+4444))+((x-1111)*(z-2222)+(x+3333)*(y-4444));
+    if (m<t) m=t;
+    t=((x+1111)*(z+2222)-(x-3333)*(y+4444))+((x-1111)*(z-2222)+(x+3333)*(y-4444));
+    if (m<t) m=t;
+    x++;
+    y--;
+    z++;
+    i++;
+  }
+
+  return m;
+}
+
+int main () {
+  int x=0;
+
+  x=x+funkcja_declarations(4,5,6,20);
+
+  printInt(x);
+
+  return 0;
+}
+  ------

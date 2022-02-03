@@ -1,6 +1,12 @@
+
+int[] same(int[] x) {
+   return x;
+}
+
 int main() {
 
-  int[] a = new int[10];
+  int[] b = new int[10];
+  int[] a = same(b);
   int j=0;
   while (j<a.length) {
      a[j] = j;
