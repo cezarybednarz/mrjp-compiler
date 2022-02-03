@@ -49,27 +49,12 @@ L44:                              ; preds = [L17]
   br label %L46
 L46:                              ; preds = [L44,L17]
   %r104 = phi i32 [ %r102, %L17 ], [ %r40, %L44 ]
-  %r48 = add i32 %r93, 1111
-  %r50 = add i32 %r96, 2222
-  %r51 = mul i32 %r48, %r50
-  %r53 = sub i32 %r93, 3333
-  %r55 = add i32 %r99, 4444
-  %r56 = mul i32 %r53, %r55
-  %r57 = sub i32 %r51, %r56
-  %r59 = sub i32 %r93, 1111
-  %r61 = sub i32 %r96, 2222
-  %r62 = mul i32 %r59, %r61
-  %r64 = add i32 %r93, 3333
-  %r66 = sub i32 %r99, 4444
-  %r67 = mul i32 %r64, %r66
-  %r68 = add i32 %r62, %r67
-  %r69 = add i32 %r57, %r68
-  %r72 = icmp slt i32 %r104, %r69
+  %r72 = icmp slt i32 %r104, %r40
   br i1 %r72, label %L73, label %L75
 L73:                              ; preds = [L46]
   br label %L75
 L75:                              ; preds = [L73,L46]
-  %r103 = phi i32 [ %r104, %L46 ], [ %r69, %L73 ]
+  %r103 = phi i32 [ %r104, %L46 ], [ %r40, %L73 ]
   %r77 = add i32 %r93, 1
   %r79 = sub i32 %r99, 1
   %r81 = add i32 %r96, 1

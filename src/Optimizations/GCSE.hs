@@ -255,6 +255,14 @@ translateArgs args = do
     return (t, v') )
     args
 
+translateOperands :: [(Val, Label)] -> OM [(Val, Label)]
+translateOperands args = do
+  mapM (\(v, l) -> do
+    v' <- getVal v
+    return (v, l))
+    args
+    
+
 optimizeStmt :: Label -> LLVMStmt -> OM (Maybe LLVMStmt)
 optimizeStmt label llvmstmt = do
   let zeroR = Reg 0
@@ -297,6 +305,9 @@ optimizeStmt label llvmstmt = do
         return $ Just (Xor r1 t1 v1' v2')
       else
         return Nothing
+    (Phi r1 t1 ops) -> do
+      ops' <- translateOperands ops
+      return $ Just (Phi r1 t1 ops')
     -- arrays 
     (CallArr r1 t1 s1 ts) -> do
       ts' <- translateArgs ts 

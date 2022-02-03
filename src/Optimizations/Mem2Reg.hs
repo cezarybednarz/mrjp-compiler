@@ -281,7 +281,7 @@ translateStmt regVal llvmstmt = do
       v1' <- transVal v1 regVal
       v2' <- transVal v2 regVal
       return (Xor r1 t1 v1' v2')
-    (Phi r1 t1 ops) -> do -- todo remove backend phi if possible
+    (Phi r1 t1 ops) -> do 
       ops' <- translateOperands ops regVal
       return (Phi r1 t1 ops')
     -- arrays
