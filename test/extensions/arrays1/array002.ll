@@ -127,6 +127,7 @@ L16:                              ; preds = [L6]
    %r21 = load i32*, i32** %r20
   br label %L23
 L23:                              ; preds = [L16,L26]
+  %r56 = phi i32 [ %r56, %L26 ], [ %r19, %L16 ]
   %r53 = phi i32 [ %r34, %L26 ], [ 0, %L16 ]
   %r25 = icmp slt i32 %r53, 5
   br i1 %r25, label %L26, label %L35
@@ -140,7 +141,7 @@ L26:                              ; preds = [L23]
 L35:                              ; preds = [L23]
   br label %L37
 L37:                              ; preds = [L35,L40]
-  %r55 = phi i32 [ %r55, %L40 ], [ %r19, %L35 ]
+  %r55 = phi i32 [ %r55, %L40 ], [ %r56, %L35 ]
   %r54 = phi i32 [ %r48, %L40 ], [ 0, %L35 ]
   %r39 = icmp slt i32 %r54, %r55
   br i1 %r39, label %L40, label %L49

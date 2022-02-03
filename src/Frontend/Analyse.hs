@@ -118,13 +118,14 @@ addTopDefs (def:ds) = do
   local (const newEnv) $ addTopDefs ds
 
 convArgExpr :: Arg -> SAM Expr
-convArgExpr (Arg _ t _) =
+convArgExpr (Arg line t _) =
   case t of
     (Bool _) -> return $ ELitTrue Nothing
     (Int _)  -> return $ ELitInt Nothing 0
     (Str _)  -> return $ EString Nothing ""
     (Array _ t') -> do
       return $ ENewArr Nothing t' (ELitInt Nothing 0)
+    (Void _) -> throwError $ errMessage line VoidFunctionArg
     _        -> throwError "compiler internal error: convArgExpr"
 
 analyseTopDef :: TopDef -> SAM ()

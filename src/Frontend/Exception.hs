@@ -41,6 +41,7 @@ data SemanticAnalysisException
     | WrongArrayTypeInForEach
     | ForEachTypeMismatch Ident
     | LengthNotOnArray 
+    | VoidFunctionArg
     -- invalid expression as array name
 
 instance Show SemanticAnalysisException where
@@ -69,6 +70,7 @@ instance Show SemanticAnalysisException where
   show WrongArrayTypeInForEach = "for loop should be iterated over an array"
   show (ForEachTypeMismatch (Ident id)) = "variable " ++ show id ++ " should be different type"
   show LengthNotOnArray = "length can be only applied to array type"
+  show VoidFunctionArg = "function arguments should be non void"
 
 
 

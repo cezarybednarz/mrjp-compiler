@@ -221,7 +221,7 @@ findTrivialPhis ((reg, (t, [(v1, l1), (v2, l2)])):phis) = do
     findTrivialPhis phis
 findTrivialPhis ((reg, (t, [(v1, l1)])):phis) = do
   findTrivialPhis phis
-  
+
 translateValuesForBlocks :: (Reg, Val) -> [Label] -> OM ()
 translateValuesForBlocks _ [] = return ()
 translateValuesForBlocks regVal (label:labels) = do
@@ -281,7 +281,7 @@ translateStmt regVal llvmstmt = do
       v1' <- transVal v1 regVal
       v2' <- transVal v2 regVal
       return (Xor r1 t1 v1' v2')
-    (Phi r1 t1 ops) -> do 
+    (Phi r1 t1 ops) -> do
       ops' <- translateOperands ops regVal
       return (Phi r1 t1 ops')
     -- arrays
@@ -392,10 +392,10 @@ optimizeStmt label llvmstmt = do
     (AllocaArr r1 t1) -> do
       return $ Just (AllocaArr r1 t1)
     (StoreArr t1 v1 t2 r1) -> do
-      v1' <- readVal (TypeVal t1 v1) label 
+      v1' <- readVal (TypeVal t1 v1) label
       return $ Just (StoreArr t1 v1' t2 r1)
     (LoadArr r1 t1 t2 r2) -> do
-      writeVariable r1 label (TypeVal t1 (VReg r1)) 
+      writeVariable r1 label (TypeVal t1 (VReg r1))
       return $ Just (LoadArr r1 t1 t2 r2)
     (GetElementPtrArr r1 t1 t2 r2 t3 v1) -> do
       return $ Just (GetElementPtrArr r1 t1 t2 r2 t3 v1)
