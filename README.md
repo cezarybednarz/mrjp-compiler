@@ -2,7 +2,7 @@
 ### Author: Cezary Bednarz 
 
 ## About
-Compiler of Java-like Latte language. Syntax in BNF form is defined in `src/Latte.cf`. Examples can be found in `test` folder.
+Compiler of Java-like Latte language to LLVM IR. Syntax in BNF form is defined in `src/Latte.cf`. Examples can be found in `test` folder.
 
 ## Tools
 Compiler is written in Haskell.
