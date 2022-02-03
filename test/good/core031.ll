@@ -33,8 +33,8 @@ L9:                              ; preds = [L3]
   %r11 = icmp sgt i32 %r1, 0
   %r12 = xor i1 %r11, true
   br label %L13
-L13:                              ; preds = [L3]
-  %r14 = phi i1 [ %r12, %L9 ], [ true, %L3 ]
+L13:                              ; preds = [L3,L9]
+  %r14 = phi i1 [ true, %L3 ], [ %r12, %L9 ]
   %r15 = xor i1 %r14, true
   br i1 %r15, label %L27, label %L16
 L16:                              ; preds = [L13]
@@ -45,12 +45,12 @@ L20:                              ; preds = [L16]
   %r22 = icmp slt i32 %r1, 0
   %r23 = xor i1 %r22, true
   br label %L24
-L24:                              ; preds = [L16]
-  %r25 = phi i1 [ %r23, %L20 ], [ true, %L16 ]
+L24:                              ; preds = [L16,L20]
+  %r25 = phi i1 [ true, %L16 ], [ %r23, %L20 ]
   %r26 = xor i1 %r25, true
   br label %L27
-L27:                              ; preds = [L13]
-  %r28 = phi i1 [ %r26, %L24 ], [ true, %L13 ]
+L27:                              ; preds = [L13,L24]
+  %r28 = phi i1 [ true, %L13 ], [ %r26, %L24 ]
   br i1 %r28, label %L29, label %L31
 L29:                              ; preds = [L27]
   ret i32 7

@@ -32,15 +32,17 @@ L14:                              ; preds = [L11]
 L15:                              ; preds = [L11]
   br label %L16
 L16:                              ; preds = [L15,L14]
+  %r25 = phi i32 [ 1, %L14 ], [ 2, %L15 ]
   br label %L18
 L17:                              ; preds = [L8]
   br label %L18
 L18:                              ; preds = [L17,L16]
+  %r24 = phi i32 [ %r25, %L16 ], [ 3, %L17 ]
   br label %L20
 L19:                              ; preds = [L1]
   br label %L20
 L20:                              ; preds = [L19,L18]
-  %r23 = phi i32 [ %r2, %L18 ], [ 4, %L19 ]
+  %r23 = phi i32 [ %r24, %L18 ], [ 4, %L19 ]
   call void @printInt(i32 %r23)
   ret i32 0
 }

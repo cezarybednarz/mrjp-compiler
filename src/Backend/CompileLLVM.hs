@@ -548,15 +548,16 @@ compileExpr (EOr _ expr1 expr2) = do
   lFalse2 <- getLabel
   lTrue <- newLabel
   emitStmtForLabel (Br lTrue) lFalse2
-  putInBlockForBlock lTrue lFalse2
   emitNewBlock lTrue
   emitStmtForLabel (BrCond Ti1 e1 lTrue lFalse) lStart
-  putInBlockForBlock lTrue lStart
-  putInBlockForBlock lFalse lStart
   reg <- newRegister
   lCurr <- getLabel
-  putPhiForBlock lCurr reg Ti1 (VTrue, lStart)
-  putPhiForBlock lCurr reg Ti1 (e2, lFalse2)
+  emitStmt $ Phi reg Ti1 [(VTrue, lStart), (e2, lFalse2)]
+  -- putPhiForBlock lCurr reg Ti1 (VTrue, lStart)
+  -- putPhiForBlock lCurr reg Ti1 (e2, lFalse2)
+  putInBlockForBlock lTrue lFalse2
+  putInBlockForBlock lTrue lStart
+  putInBlockForBlock lFalse lStart
   return (Ti1, VReg reg)
 compileExpr (ERel _ expr1 op expr2) = do
   let cond = convRelOpCond op
@@ -725,9 +726,9 @@ compileStmt (Cond _ expr block) = do
       lFalse <- newLabel
       emitNewBlock lFalse
       emitStmtForLabel (BrCond Ti1 e lTrue lFalse) lStart
+      emitStmtForLabel (Br lFalse) lTrue2
       putInBlockForBlock lTrue lStart
       putInBlockForBlock lFalse lStart
-      emitStmtForLabel (Br lFalse) lTrue2
       putInBlockForBlock lFalse lTrue2
       return (ReturnNothing, env)
 compileStmt (CondElse _ expr block1 block2) = do
@@ -753,11 +754,11 @@ compileStmt (CondElse _ expr block1 block2) = do
       lEnd <- newLabel
       emitNewBlock lEnd
       emitStmtForLabel (BrCond Ti1 e lTrue lFalse) lStart
+      emitStmtForLabel (Br lEnd) lTrue2
+      emitStmtForLabel (Br lEnd) lFalse2
       putInBlockForBlock lTrue lStart
       putInBlockForBlock lFalse lStart
-      emitStmtForLabel (Br lEnd) lTrue2
       putInBlockForBlock lEnd lTrue2
-      emitStmtForLabel (Br lEnd) lFalse2
       putInBlockForBlock lEnd lFalse2
       return (ReturnNothing, env)
   return (ReturnNothing, env)
@@ -773,12 +774,12 @@ compileStmt (While _ expr block) = do
   local (const env) $ compileBlock block
   emitStmt $ Br lStart
   lCurr <- getLabel
-  putInBlockForBlock lStart lCurr
   lEnd <- newLabel
   emitNewBlock lEnd
   emitStmtForLabel (Br lStart) lStart0
-  putInBlockForBlock lStart lStart0
   emitStmtForLabel (BrCond Ti1 e lBlock lEnd) lStart2
+  putInBlockForBlock lStart lCurr
+  putInBlockForBlock lStart lStart0
   putInBlockForBlock lBlock lStart2
   putInBlockForBlock lEnd lStart2
   return (ReturnNothing, env)

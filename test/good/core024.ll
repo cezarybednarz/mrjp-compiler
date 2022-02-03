@@ -31,8 +31,8 @@ L3:                              ; preds = [L0]
 L9:                              ; preds = [L3]
   %r10 = call i1 @e()
   br label %L11
-L11:                              ; preds = [L3]
-  %r12 = phi i1 [ %r10, %L9 ], [ true, %L3 ]
+L11:                              ; preds = [L3,L9]
+  %r12 = phi i1 [ true, %L3 ], [ %r10, %L9 ]
   br i1 %r12, label %L13, label %L14
 L13:                              ; preds = [L11]
   call void @printString(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i32 0, i32 0))

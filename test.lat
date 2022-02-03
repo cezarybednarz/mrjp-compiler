@@ -1,15 +1,12 @@
 
-
-int main() {
-  int y = 3;
-  int x = y + 1;
-  if (!true || true) {
-    x = y + 1;
+int main () {
+  int i=0;
+  int m=0;
+  while (i<10) {
+    if (0<1) m=0;
+    if (0<1) m=0;
+    i++;
   }
-  else { 
-    x = y + 2;
-  }
-  x = y + 1;
-  printInt(x);
+  printInt(i);
   return 0;
 }

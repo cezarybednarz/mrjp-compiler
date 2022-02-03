@@ -30,13 +30,13 @@ L6:                              ; preds = [L1]
 L9:                              ; preds = [L6]
   %r10 = xor i1 true, true
   br label %L11
-L11:                              ; preds = [L6]
-  %r12 = phi i1 [ %r10, %L9 ], [ true, %L6 ]
+L11:                              ; preds = [L6,L9]
+  %r12 = phi i1 [ true, %L6 ], [ %r10, %L9 ]
   %r13 = xor i1 %r12, true
   %r14 = xor i1 %r13, true
   br label %L15
-L15:                              ; preds = [L1]
-  %r16 = phi i1 [ %r14, %L11 ], [ true, %L1 ]
+L15:                              ; preds = [L1,L11]
+  %r16 = phi i1 [ true, %L1 ], [ %r14, %L11 ]
   %r17 = xor i1 %r16, true
   br i1 %r17, label %L18, label %L19
 L18:                              ; preds = [L15]
@@ -51,8 +51,8 @@ L20:                              ; preds = [L19,L18]
 L22:                              ; preds = [L20]
   %r23 = call i1 @dontCallMe(i32 1)
   br label %L24
-L24:                              ; preds = [L20]
-  %r25 = phi i1 [ %r23, %L22 ], [ true, %L20 ]
+L24:                              ; preds = [L20,L22]
+  %r25 = phi i1 [ true, %L20 ], [ %r23, %L22 ]
   call void @printBool(i1 %r25)
   %r26 = sub i32 0, 5
   %r27 = icmp slt i32 4, %r26
@@ -62,8 +62,8 @@ L29:                              ; preds = [L24]
   %r30 = call i1 @dontCallMe(i32 2)
   %r31 = xor i1 %r30, true
   br label %L32
-L32:                              ; preds = [L24]
-  %r33 = phi i1 [ %r31, %L29 ], [ true, %L24 ]
+L32:                              ; preds = [L24,L29]
+  %r33 = phi i1 [ true, %L24 ], [ %r31, %L29 ]
   %r34 = xor i1 %r33, true
   call void @printBool(i1 %r34)
   %r36 = icmp eq i32 4, 4
@@ -77,13 +77,13 @@ L38:                              ; preds = [L32]
 L42:                              ; preds = [L38]
   %r43 = xor i1 true, true
   br label %L44
-L44:                              ; preds = [L38]
-  %r45 = phi i1 [ %r43, %L42 ], [ true, %L38 ]
+L44:                              ; preds = [L38,L42]
+  %r45 = phi i1 [ true, %L38 ], [ %r43, %L42 ]
   %r46 = xor i1 %r45, true
   %r47 = xor i1 %r46, true
   br label %L48
-L48:                              ; preds = [L32]
-  %r49 = phi i1 [ %r47, %L44 ], [ true, %L32 ]
+L48:                              ; preds = [L32,L44]
+  %r49 = phi i1 [ true, %L32 ], [ %r47, %L44 ]
   %r50 = xor i1 %r49, true
   call void @printBool(i1 %r50)
   %r51 = call i1 @implies(i1 false, i1 false)
@@ -126,8 +126,8 @@ L3:                              ; preds = [L0]
 L8:                              ; preds = [L3]
   %r11 = icmp eq i1 %r0, %r1
   br label %L12
-L12:                              ; preds = [L3]
-  %r13 = phi i1 [ %r11, %L8 ], [ true, %L3 ]
+L12:                              ; preds = [L3,L8]
+  %r13 = phi i1 [ true, %L3 ], [ %r11, %L8 ]
   ret i1 %r13
 }
 

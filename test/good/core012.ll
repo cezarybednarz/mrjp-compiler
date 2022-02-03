@@ -33,10 +33,13 @@ L1:                              ; preds = [L0]
   call void @printInt(i32 %r14)
   %r15 = srem i32 78, 3
   call void @printInt(i32 %r15)
-  %r22 = icmp sgt i32 %r10, %r7
+  %r18 = sub i32 56, %r3
+  %r21 = add i32 56, %r3
+  %r22 = icmp sgt i32 %r18, %r21
   call void @printBool(i1 %r22)
   %r25 = sdiv i32 56, %r3
-  %r29 = icmp sle i32 %r25, %r13
+  %r28 = mul i32 56, %r3
+  %r29 = icmp sle i32 %r25, %r28
   call void @printBool(i1 %r29)
   %r30 = call i8* @__concatStrings__(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.1, i32 0, i32 0), i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.2, i32 0, i32 0))
   %r31 = call i8* @__concatStrings__(i8* %r30, i8* getelementptr inbounds ([14 x i8], [14 x i8]* @.str.3, i32 0, i32 0))
