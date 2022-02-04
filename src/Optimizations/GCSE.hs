@@ -259,7 +259,7 @@ translateOperands :: [(Val, Label)] -> OM [(Val, Label)]
 translateOperands args = do
   mapM (\(v, l) -> do
     v' <- getVal v
-    return (v, l))
+    return (v', l))
     args
 
 
